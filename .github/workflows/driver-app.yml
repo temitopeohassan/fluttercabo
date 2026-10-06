@@ -1,13 +1,8 @@
 name: Driver app
 
 on:
+  # Runs on pushes to any branch, so pull requests from this repo are covered too.
   push:
-    branches: [main]
-    paths:
-      - 'driver-app/**'
-      - '.github/workflows/driver-app.yml'
-      - '.github/workflows/flutter-android.yml'
-  pull_request:
     paths:
       - 'driver-app/**'
       - '.github/workflows/driver-app.yml'
