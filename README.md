@@ -10,3 +10,13 @@ Mono repo for Cabo app
 | [`partner-portal/`](partner-portal) | Partner portal (web) for tour operators, guides, attractions and hotels |
 | [`website/`](website) | Marketing website |
 | [`backend/`](backend) | Backend services and APIs |
+
+## CI
+
+GitHub Actions tests the Flutter apps and builds release APKs. The workflows live in `.github/workflows/`:
+
+- `rider-app.yml` runs when `rider-app/` changes
+- `driver-app.yml` runs when `driver-app/` changes
+- `flutter-android.yml` is the shared job both of them call
+
+To run one by hand, go to **Actions**, pick a workflow and click **Run workflow**. When it finishes, download the APK from the run's **Artifacts** section.

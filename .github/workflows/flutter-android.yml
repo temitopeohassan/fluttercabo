@@ -1,0 +1,70 @@
+# Shared job: test a Flutter app and build a release APK.
+# Called by rider-app.yml and driver-app.yml.
+name: Flutter Android build
+
+on:
+  workflow_call:
+    inputs:
+      app-dir:
+        description: Folder containing the Flutter app (pubspec.yaml)
+        required: true
+        type: string
+      artifact-name:
+        description: Name of the uploaded APK artifact
+        required: true
+        type: string
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.app-dir }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for Flutter project
+        id: project
+        run: |
+          if [ -f pubspec.yaml ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No pubspec.yaml in ${{ inputs.app-dir }} yet, skipping."
+          fi
+
+      - uses: actions/setup-java@v4
+        if: steps.project.outputs.exists == 'true'
+        with:
+          distribution: zulu
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        if: steps.project.outputs.exists == 'true'
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        if: steps.project.outputs.exists == 'true'
+        run: flutter pub get
+
+      - name: Run tests
+        if: steps.project.outputs.exists == 'true'
+        run: |
+          if [ -d test ]; then
+            flutter test
+          else
+            echo "::notice::No test folder in ${{ inputs.app-dir }}, skipping tests."
+          fi
+
+      - name: Build APK
+        if: steps.project.outputs.exists == 'true'
+        run: flutter build apk --release
+
+      - uses: actions/upload-artifact@v4
+        if: steps.project.outputs.exists == 'true'
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.app-dir }}/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error

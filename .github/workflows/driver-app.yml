@@ -1,0 +1,22 @@
+name: Driver app
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'driver-app/**'
+      - '.github/workflows/driver-app.yml'
+      - '.github/workflows/flutter-android.yml'
+  pull_request:
+    paths:
+      - 'driver-app/**'
+      - '.github/workflows/driver-app.yml'
+      - '.github/workflows/flutter-android.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    uses: ./.github/workflows/flutter-android.yml
+    with:
+      app-dir: driver-app
+      artifact-name: cabo-driver-apk
