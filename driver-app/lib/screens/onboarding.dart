@@ -71,12 +71,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   const Spacer(flex: 3),
                   const CaboLogo(size: 76),
                   const SizedBox(height: 14),
-                  SizedBox(
-                    width: 170,
-                    height: 14,
-                    child: CustomPaint(painter: SwooshPainter()),
-                  ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 4),
                   Text(
                     'EARN  •  GROW  •  BE INDEPENDENT',
                     style: CaboText.label.copyWith(

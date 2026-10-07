@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 
-/// "Cabo" wordmark with the yellow pin standing in for the "o".
+/// The Cabo wordmark: "Cab" followed by an "o" drawn as a ring with the
+/// yellow location pin inside, and a yellow smile under the letters.
 class CaboLogo extends StatelessWidget {
   const CaboLogo({
     super.key,
@@ -16,58 +17,150 @@ class CaboLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              'Cab',
-              style: TextStyle(
-                fontSize: size,
-                fontWeight: FontWeight.w800,
-                color: color,
-                height: 1,
-                letterSpacing: -size * 0.03,
+    final painter = _WordmarkPainter(size, color);
+    return Semantics(
+      label: driverLabel ? 'Cabo Driver' : 'Cabo',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CustomPaint(size: painter.layoutSize, painter: painter),
+          if (driverLabel) ...[
+            SizedBox(height: size * 0.14),
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: size * 0.18,
+                vertical: size * 0.05,
               ),
-            ),
-            Padding(
-              padding: EdgeInsets.only(bottom: size * 0.02),
-              child: Icon(
-                Icons.location_on,
-                size: size * 0.86,
+              decoration: BoxDecoration(
                 color: CaboColors.yellow,
+                borderRadius: BorderRadius.circular(size),
+              ),
+              child: Text(
+                'DRIVER',
+                style: TextStyle(
+                  fontSize: size * 0.2,
+                  fontWeight: FontWeight.w800,
+                  color: CaboColors.onYellow,
+                  letterSpacing: size * 0.06,
+                ),
               ),
             ),
           ],
-        ),
-        if (driverLabel) ...[
-          SizedBox(height: size * 0.12),
-          Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: size * 0.18,
-              vertical: size * 0.05,
-            ),
-            decoration: BoxDecoration(
-              color: CaboColors.yellow,
-              borderRadius: BorderRadius.circular(size),
-            ),
-            child: Text(
-              'DRIVER',
-              style: TextStyle(
-                fontSize: size * 0.2,
-                fontWeight: FontWeight.w800,
-                color: CaboColors.onYellow,
-                letterSpacing: size * 0.06,
-              ),
-            ),
-          ),
         ],
-      ],
+      ),
     );
   }
+}
+
+class _WordmarkPainter extends CustomPainter {
+  _WordmarkPainter(this.fontSize, this.color)
+    : _text = TextPainter(
+        textDirection: TextDirection.ltr,
+        text: TextSpan(
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: fontSize,
+            fontWeight: FontWeight.w800,
+            height: 1.1,
+            letterSpacing: -fontSize * 0.02,
+            color: color,
+          ),
+          children: const [
+            TextSpan(text: 'Cab'),
+            // Reserves the space of a real "o"; the ring is painted over it.
+            TextSpan(
+              text: 'o',
+              style: TextStyle(color: Color(0x00000000)),
+            ),
+          ],
+        ),
+      )..layout();
+
+  final double fontSize;
+  final Color color;
+  final TextPainter _text;
+
+  double get _baseline => _text.computeLineMetrics().first.baseline;
+
+  Size get layoutSize =>
+      Size(_text.width + fontSize * 0.04, _baseline + fontSize * 0.3);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    _text.paint(canvas, Offset.zero);
+    final s = fontSize;
+    final baseline = _baseline;
+
+    Rect box(int start) => _text
+        .getBoxesForSelection(
+          TextSelection(baseOffset: start, extentOffset: start + 1),
+        )
+        .first
+        .toRect();
+    final b = box(2);
+    final o = box(3);
+
+    // The "o": a thick ring as tall as the x-height.
+    const xHeight = 0.58;
+    final stroke = s * 0.12;
+    final radius = s * xHeight / 2 - stroke / 2;
+    final center = Offset(o.center.dx, baseline - s * xHeight / 2);
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke,
+    );
+
+    // Yellow pin inside the ring.
+    final inner = radius - stroke / 2;
+    final headR = inner * 0.7;
+    final headC = Offset(center.dx, center.dy - inner * 0.2);
+    final tip = Offset(center.dx, center.dy + inner * 0.92);
+    final yellow = Paint()..color = CaboColors.yellow;
+    canvas.drawCircle(headC, headR, yellow);
+    final tail = Path()
+      ..moveTo(headC.dx - headR * 0.9, headC.dy + headR * 0.45)
+      ..quadraticBezierTo(
+        headC.dx - headR * 0.5,
+        tip.dy - headR * 0.6,
+        tip.dx,
+        tip.dy,
+      )
+      ..quadraticBezierTo(
+        headC.dx + headR * 0.5,
+        tip.dy - headR * 0.6,
+        headC.dx + headR * 0.9,
+        headC.dy + headR * 0.45,
+      )
+      ..close();
+    canvas.drawPath(tail, yellow);
+    canvas.drawCircle(headC, headR * 0.4, Paint()..color = CaboColors.onYellow);
+
+    // Smile from under the "b" to under the "o".
+    final smile = Path()
+      ..moveTo(b.left + b.width * 0.15, baseline + s * 0.08)
+      ..quadraticBezierTo(
+        (b.left + o.center.dx) / 2,
+        baseline + s * 0.3,
+        o.left + o.width * 0.35,
+        baseline + s * 0.08,
+      );
+    canvas.drawPath(
+      smile,
+      Paint()
+        ..color = CaboColors.yellow
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = s * 0.075
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _WordmarkPainter old) =>
+      old.fontSize != fontSize || old.color != color;
 }
 
 /// Lagos skyline silhouette with a line drawing of the Lekki-Ikoyi Link Bridge.
@@ -159,21 +252,6 @@ class SkylinePainter extends CustomPainter {
         );
       }
     }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-/// Yellow brush stroke under the logo.
-class SwooshPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final path = Path()
-      ..moveTo(0, size.height)
-      ..quadraticBezierTo(size.width * 0.5, size.height * 0.2, size.width, 0)
-      ..quadraticBezierTo(size.width * 0.5, size.height * 0.55, 0, size.height);
-    canvas.drawPath(path, Paint()..color = CaboColors.yellow);
   }
 
   @override
