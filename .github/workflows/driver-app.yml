@@ -1,0 +1,17 @@
+name: Driver app
+
+on:
+  # Runs on pushes to any branch, so pull requests from this repo are covered too.
+  push:
+    paths:
+      - 'driver-app/**'
+      - '.github/workflows/driver-app.yml'
+      - '.github/workflows/flutter-android.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    uses: ./.github/workflows/flutter-android.yml
+    with:
+      app-dir: driver-app
+      artifact-name: cabo-driver-apk

@@ -1,0 +1,17 @@
+name: Rider app
+
+on:
+  # Runs on pushes to any branch, so pull requests from this repo are covered too.
+  push:
+    paths:
+      - 'rider-app/**'
+      - '.github/workflows/rider-app.yml'
+      - '.github/workflows/flutter-android.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    uses: ./.github/workflows/flutter-android.yml
+    with:
+      app-dir: rider-app
+      artifact-name: cabo-rider-apk
