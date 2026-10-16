@@ -10,7 +10,7 @@ Mono repo for Cabo app
 | [`partner-portal/`](partner-portal) | Partner portal (web) for tour operators, guides, attractions and hotels |
 | [`website/`](website) | Marketing website |
 | [`backend/`](backend) | Backend services and APIs |
-| [`screenshots/`](screenshots) | Screenshots of the apps, e.g. [`screenshots/driver/`](screenshots/driver) |
+| [`screenshots/`](screenshots) | Screenshots of the apps: [`driver/`](screenshots/driver) and [`rider/`](screenshots/rider) |
 
 ## CI
 
