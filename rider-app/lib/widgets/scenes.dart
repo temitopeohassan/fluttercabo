@@ -5,8 +5,23 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 import 'brand.dart';
 
-/// Painted stand-ins for destination photography until real photos exist.
-enum SceneKind { skyline, beach, nature, art, heritage, food, nightlife, van }
+/// Destination imagery. Each kind shows a photo from `assets/photos/` when
+/// the file is bundled, and falls back to a painted illustration otherwise.
+enum SceneKind {
+  skyline('lekki-ikoyi-bridge.jpg'),
+  beach('tarkwa-bay.jpg'),
+  nature('lekki-conservation-centre.jpg'),
+  art('nike-art-gallery.jpg'),
+  heritage('freedom-park.jpg'),
+  food('lagos-street-food.jpg'),
+  nightlife('lagos-at-night.jpg'),
+  van('accessible-van.jpg');
+
+  const SceneKind(this.photo);
+
+  /// File name inside `assets/photos/`.
+  final String photo;
+}
 
 class Scene extends StatelessWidget {
   const Scene(this.kind, {super.key, this.radius = 18, this.height});
@@ -16,12 +31,17 @@ class Scene extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final painted = CustomPaint(painter: _ScenePainter(kind));
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
       child: SizedBox(
         height: height,
         width: double.infinity,
-        child: CustomPaint(painter: _ScenePainter(kind)),
+        child: Image.asset(
+          'assets/photos/${kind.photo}',
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => painted,
+        ),
       ),
     );
   }
