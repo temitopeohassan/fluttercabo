@@ -15,12 +15,13 @@ enum SceneKind {
   heritage('freedom-park.jpg'),
   food('lagos-street-food.jpg'),
   nightlife('lagos-at-night.jpg'),
-  van('accessible-van.jpg');
+  // No photo supplied yet; set to 'accessible-van.jpg' once one is added.
+  van(null);
 
   const SceneKind(this.photo);
 
-  /// File name inside `assets/photos/`.
-  final String photo;
+  /// File name inside `assets/photos/`, or null to use the illustration.
+  final String? photo;
 }
 
 class Scene extends StatelessWidget {
@@ -32,16 +33,19 @@ class Scene extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final painted = CustomPaint(painter: _ScenePainter(kind));
+    final photo = kind.photo;
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
       child: SizedBox(
         height: height,
         width: double.infinity,
-        child: Image.asset(
-          'assets/photos/${kind.photo}',
-          fit: BoxFit.cover,
-          errorBuilder: (_, _, _) => painted,
-        ),
+        child: photo == null
+            ? painted
+            : Image.asset(
+                'assets/photos/$photo',
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => painted,
+              ),
       ),
     );
   }

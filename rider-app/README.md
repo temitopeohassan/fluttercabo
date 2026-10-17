@@ -30,7 +30,8 @@ GitHub Actions runs the tests and builds a release APK on every push that change
 | --- | --- |
 | `lib/routes.dart` | Every screen with its section number and route |
 | `lib/screens/` | One file per section: onboarding, home, ride, shuttle, tours, explore, wallet, safety, bookings, profile, system |
-| `lib/widgets/` | Shared pieces: buttons, cards, the logo, the painted map and destination illustrations, bottom navigation |
+| `lib/widgets/` | Shared pieces: buttons, cards, the logo, the painted map, destination photos and their fallback illustrations, bottom navigation |
+| `assets/photos/` | Destination photos and their credits |
 | `lib/data.dart` | Sample places and tours, plus naira and home-currency formatting |
 | `lib/theme.dart` | Brand colours and text styles |
 | `tool/screenshots.js` | Regenerates `screenshots/rider/` |
@@ -45,7 +46,7 @@ node tool/screenshots.js build/web ../screenshots/rider
 
 ## Not done yet
 
-- **Photos**: destinations, tours and vehicles use painted illustrations (`lib/widgets/scenes.dart`). Swap in real photography when it is available.
+- **Photos**: destinations and tours use photos from `assets/photos/` (credits and notes in `assets/photos/CREDITS.md`). The accessible van still uses an illustration until a photo is added; any missing photo falls back to the illustration in `lib/widgets/scenes.dart`.
 - **Maps** are drawn by the app (`lib/widgets/map.dart`) as a stand-in for Google Maps or Mapbox.
 - **Data** is hard-coded sample data until the backend exists. Home-currency amounts use a fixed sample rate.
 - **Launcher icon** is still the Flutter default.
