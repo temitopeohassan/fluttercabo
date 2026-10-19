@@ -10,7 +10,7 @@ release.
 
 | File | Shows | Used for | Notes |
 | --- | --- | --- | --- |
-| `lekki-ikoyi-bridge.jpg` | Lekki-Ikoyi Link Bridge | Welcome and sign-in backgrounds | |
+| `lekki-ikoyi-bridge.jpg` | Lekki-Ikoyi Link Bridge at sunset | Welcome and sign-in backgrounds | |
 | `lekki-conservation-centre.jpg` | Lekki Conservation Centre canopy walkway | Nature tours and attraction | |
 | `nike-art-gallery.jpg` | Nike Art Gallery interior | Art attraction and tour | |
 | `tarkwa-bay.jpg` | Lagos beach with palm trees | Tarkwa Bay beach and boat trip | |
