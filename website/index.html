@@ -8,7 +8,9 @@
   <meta name="theme-color" content="#0B4A2E">
   <meta property="og:title" content="Cabo: More than a ride. It's your Lagos experience.">
   <meta property="og:description" content="Safe rides, airport pickups and curated tours in Lagos. Join the waitlist.">
-  <meta property="og:image" content="assets/images/lekki-ikoyi-bridge.jpg">
+  <meta property="og:image" content="assets/images/lekki-bridge-sunset.jpg">
+  <link rel="icon" type="image/png" href="assets/images/favicon.png">
+  <link rel="apple-touch-icon" href="assets/images/apple-touch-icon.png">
   <link rel="preload" href="assets/fonts/poppins-bold.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="styles.css">
   <script src="script.js" defer></script>
@@ -18,18 +20,15 @@
 
   <header class="site-header">
     <nav class="nav container" aria-label="Main">
-      <a class="logo" href="#top" aria-label="Cabo home">
-        Cab<svg class="logo-o" viewBox="0 0 100 100" aria-hidden="true">
-          <circle cx="50" cy="50" r="39" fill="none" stroke="currentColor" stroke-width="22"/>
-          <path d="M50 19a17 17 0 0 1 17 17c0 13-17 32-17 32S33 49 33 36a17 17 0 0 1 17-17z" fill="#FFC72C"/>
-          <circle cx="50" cy="36" r="6.5" fill="#0B2E1C"/>
-        </svg><svg class="logo-smile" viewBox="0 0 100 24" aria-hidden="true"><path d="M6 6 Q50 30 94 6" fill="none" stroke="#FFC72C" stroke-width="9" stroke-linecap="round"/></svg>
+      <a class="logo" href="#top">
+        <img src="assets/images/logo-wordmark-dark.png" alt="Cabo" width="129" height="48">
       </a>
       <ul class="nav-links">
         <li><a href="#rides">Rides</a></li>
         <li><a href="#tours">Tours</a></li>
         <li><a href="#airport">Airport</a></li>
         <li><a href="#safety">Safety</a></li>
+        <li><a href="#app">The app</a></li>
       </ul>
       <div class="nav-actions">
         <a class="nav-driver" href="about:blank" target="_blank" rel="noopener noreferrer">Are you a driver?</a>
@@ -40,22 +39,23 @@
 
   <main id="main">
     <section class="hero" id="top">
+      <div class="hero-bg" role="img" aria-label="The Lekki-Ikoyi Link Bridge over the Lagos lagoon at sunset"></div>
       <div class="container hero-grid">
         <div class="hero-copy">
-          <p class="eyebrow"><span class="dot"></span> Launching in Lagos</p>
+          <p class="eyebrow eyebrow-light"><span class="dot"></span> Launching in Lagos</p>
           <h1>More than a ride.<br><span class="highlight">It's your Lagos experience.</span></h1>
           <p class="lede">Vetted drivers, airport pickups that wait for you, and curated tours you can book and get driven to. All in one app, built for people who don't know the city yet.</p>
           <div class="hero-ctas">
-            <a class="btn btn-primary" href="#waitlist">Join the waitlist</a>
-            <a class="btn btn-ghost" href="#how">See how it works</a>
+            <a class="btn btn-accent" href="#waitlist">Join the waitlist</a>
+            <a class="btn btn-outline-light" href="#app">See the app</a>
           </div>
           <ul class="hero-points">
             <li>Fares shown in naira and your home currency</li>
             <li>Pay with international cards</li>
           </ul>
         </div>
-        <div class="hero-media">
-          <img src="assets/images/lekki-ikoyi-bridge.jpg" alt="The Lekki-Ikoyi Link Bridge over the Lagos lagoon at dusk" width="469" height="654">
+        <div class="hero-phone">
+          <img class="phone" src="assets/images/app-home-dashboard.jpg" alt="The Cabo app home screen with shortcuts for rides, tours, Explore and airport shuttles" width="585" height="1266">
           <div class="hero-card">
             <span class="hero-card-icon" aria-hidden="true">✓</span>
             <div>
@@ -137,22 +137,41 @@
       </div>
     </section>
 
-    <section class="section">
-      <div class="container app-grid">
-        <div>
-          <p class="eyebrow">The app</p>
-          <h2>Book in under a minute</h2>
-          <ol class="steps">
-            <li><strong>Tell us where you're going.</strong> Pick a hotel, a landmark or one of our saved tours.</li>
-            <li><strong>See the price up front.</strong> In naira, with an estimate in your home currency.</li>
-            <li><strong>Meet a vetted driver.</strong> Check the plate, share your trip, and pay by card, wallet or cash.</li>
-          </ol>
-        </div>
-        <div class="phones" aria-label="Screens from the Cabo app">
-          <img class="phone" src="assets/images/app-home-dashboard.jpg" alt="Cabo home screen with ride, tour, explore and airport shortcuts" loading="lazy" width="390" height="844">
-          <img class="phone phone-front" src="assets/images/app-choose-a-ride.jpg" alt="Choosing a ride type with prices in naira and pounds" loading="lazy" width="390" height="844">
-          <img class="phone" src="assets/images/app-tour-detail.jpg" alt="Tour details for Lekki Conservation Centre" loading="lazy" width="390" height="844">
-        </div>
+    <section class="section" id="app">
+      <div class="container">
+        <p class="eyebrow">The app</p>
+        <h2>Book in under a minute</h2>
+        <ol class="steps">
+          <li><strong>Tell us where you're going.</strong> Pick a hotel, a landmark or one of our tours.</li>
+          <li><strong>See the price up front.</strong> In naira, with an estimate in your home currency.</li>
+          <li><strong>Meet a vetted driver.</strong> Check the plate, share your trip, and pay by card, wallet or cash.</li>
+        </ol>
+      </div>
+      <div class="shots" tabindex="0" aria-label="Screens from the Cabo app">
+        <figure class="shot">
+          <img class="phone" src="assets/images/app-choose-a-ride.jpg" alt="Choosing a ride type, with prices in naira and pounds" loading="lazy" width="585" height="1266">
+          <figcaption><strong>Choose your ride</strong> Upfront fares for every car type</figcaption>
+        </figure>
+        <figure class="shot">
+          <img class="phone" src="assets/images/app-driver-on-the-way.jpg" alt="Driver on the way, with the car details and trip PIN" loading="lazy" width="585" height="1266">
+          <figcaption><strong>Know who's coming</strong> Driver, car, plate and your trip PIN</figcaption>
+        </figure>
+        <figure class="shot">
+          <img class="phone" src="assets/images/app-driver-assigned.jpg" alt="Airport pickup with the meeting point and name board" loading="lazy" width="585" height="1266">
+          <figcaption><strong>Airport pickups</strong> Meeting point and a name board at arrivals</figcaption>
+        </figure>
+        <figure class="shot">
+          <img class="phone" src="assets/images/app-tour-detail.jpg" alt="Tour details for Lekki Conservation Centre" loading="lazy" width="585" height="1266">
+          <figcaption><strong>Book a tour</strong> Curated experiences from local guides</figcaption>
+        </figure>
+        <figure class="shot">
+          <img class="phone" src="assets/images/app-qr-ticket.jpg" alt="A QR ticket for a tour booking" loading="lazy" width="585" height="1266">
+          <figcaption><strong>Tickets in your pocket</strong> Scan in at the meeting point</figcaption>
+        </figure>
+        <figure class="shot">
+          <img class="phone" src="assets/images/app-safety-centre.jpg" alt="The safety centre with SOS and trip sharing" loading="lazy" width="585" height="1266">
+          <figcaption><strong>Safety built in</strong> SOS, trip sharing and 24/7 support</figcaption>
+        </figure>
       </div>
     </section>
 
@@ -205,8 +224,7 @@
   <footer class="site-footer">
     <div class="container footer-grid">
       <div>
-        <p class="footer-brand">Cabo</p>
-        <p class="footer-tag">Ride • Tour • Travel</p>
+        <img class="footer-logo" src="assets/images/logo-lockup-light.png" alt="Cabo: Ride, Tour, Travel" width="187" height="80">
       </div>
       <ul class="footer-links">
         <li><a href="#waitlist">Join waitlist</a></li>
