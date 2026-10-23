@@ -1,0 +1,42 @@
+name: Partner portal
+
+on:
+  # Runs on pushes to any branch, so pull requests from this repo are covered too.
+  push:
+    paths:
+      - 'partner-portal/**'
+      - '.github/workflows/partner-portal.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: partner-portal
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: partner-portal/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload the built site
+        uses: actions/upload-artifact@v4
+        with:
+          name: cabo-partner-portal
+          path: partner-portal/dist
