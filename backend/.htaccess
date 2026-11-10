@@ -8,8 +8,20 @@
 
 Options -Indexes
 
+# Folders here (database/, storage/...) are never served, so do not redirect
+# /database to /database/.
+<IfModule mod_dir.c>
+    DirectorySlash Off
+</IfModule>
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # Drop trailing slashes here: once the request is inside public/,
+    # Laravel's own redirect would add /public to the address.
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
     RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
 
