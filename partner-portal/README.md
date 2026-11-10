@@ -2,7 +2,20 @@
 
 The web portal for Cabo's partners: tour operators, independent guides, attractions and hotels. It is built with React 19 and Vite, and covers every partner portal requirement in the PRD (P-01 to P-09).
 
-For now all data, including sign-in accounts, comes from one JSON file: [`src/data/db.json`](src/data/db.json). The portal does not call the Cabo backend yet.
+For now all data, including sign-in accounts, comes from one JSON file: [`src/data/db.json`](src/data/db.json). The portal does not call the Cabo backend (`https://controlpanel.caboapp.online`) yet.
+
+## Upload it
+
+The built website is in [`dist/`](dist), ready to upload. You don't need Node or a build step on the server.
+
+1. Create a domain or subdomain for the portal, for example `partners.caboapp.online`.
+2. Upload **everything inside** `partner-portal/dist/` to that domain's document root (`public_html` or the folder your host shows for it). Upload the contents, not the `dist` folder itself.
+3. Make sure the hidden file `.htaccess` is uploaded too. In a hosting file manager, turn on "show hidden files" to check. It lets links such as `/bookings/bk12` open the right page; without it they show "404 Not Found".
+4. Open the domain and sign in with one of the demo accounts below.
+
+The portal must sit at the root of its domain, not in a subfolder such as `caboapp.online/partners`. The `.htaccess` rules work on Apache and LiteSpeed. On Nginx, add `try_files $uri /index.html;` instead.
+
+After changing the source, run `npm run build` and commit `dist/`. The Partner portal workflow fails if the committed `dist/` does not match the source.
 
 ## Run it
 
@@ -20,10 +33,10 @@ Other scripts:
 | --- | --- |
 | `npm test` | 36 Vitest tests of sign-in, the partner rules and the main screens |
 | `npm run lint` | oxlint |
-| `npm run build` | Production build in `dist/` |
+| `npm run build` | Production build in `dist/` (commit it after changes) |
 | `npm run seed` | Regenerates `src/data/db.json` from `scripts/seed.mjs` |
 
-The built site is a single-page app. Configure the web server to serve `index.html` for any path that is not a file, so that links such as `/bookings/bk12` work.
+The built site is a single-page app: the web server must serve `index.html` for any path that is not a file. `public/.htaccess` does this on Apache and LiteSpeed, and is copied into `dist/` by the build.
 
 ## Demo accounts
 
@@ -61,7 +74,7 @@ The menu changes with the partner. Tour operators and guides see tours, availabi
 - Passwords are stored as salted PBKDF2-SHA256 hashes (100,000 iterations), never in plain text. The browser checks them with the Web Crypto API.
 - Dates in the file are relative to the day it was generated. On first load the portal moves every date forward to today, so there are always guests to check in today and bookings in the coming weeks.
 - Changes made in the portal are saved in the browser's `localStorage`, so they survive a reload. **Settings → Privacy and data → Reset demo data** goes back to the file.
-- Every data call goes through `src/api/` (`auth.js`, `portal.js` and `store.js`). Those functions are async and return the same shapes an HTTP API would. To connect the Laravel backend later, replace their bodies with `fetch` calls; the pages do not need to change.
+- Every data call goes through `src/api/` (`auth.js`, `portal.js` and `store.js`). Those functions are async and return the same shapes an HTTP API would. To connect the Laravel backend at `https://controlpanel.caboapp.online/api/v1` later, replace their bodies with `fetch` calls; the pages do not need to change.
 
 **This is for development only.** Because the JSON file ships to the browser, anyone can read it, password hashes included, and partners' changes stay in their own browser. Before real partners use the portal, move accounts and data to the backend.
 

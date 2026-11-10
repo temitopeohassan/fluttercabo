@@ -66,3 +66,21 @@ jobs:
           DB_USERNAME: root
           DB_PASSWORD: root
         run: php artisan test
+
+      # A copy of backend/ with production dependencies in vendor/, for servers
+      # without Composer or SSH. Upload its contents as described in the README.
+      - name: Build the deploy package
+        working-directory: .
+        run: |
+          mkdir -p "$RUNNER_TEMP/package"
+          git archive --format=tar HEAD backend | tar -x -C "$RUNNER_TEMP/package"
+          cd "$RUNNER_TEMP/package/backend"
+          composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+          test -f .htaccess && test -f public/.htaccess && test ! -f .env
+
+      - name: Upload the deploy package
+        uses: actions/upload-artifact@v4
+        with:
+          name: cabo-backend-deploy
+          path: ${{ runner.temp }}/package/backend
+          include-hidden-files: true

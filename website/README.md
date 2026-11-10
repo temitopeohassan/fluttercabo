@@ -28,13 +28,13 @@ python3 -m http.server 8000   # then open http://localhost:8000
 
 The form collects a **name** and an **email address**. It checks both fields before submitting and shows a confirmation message.
 
-Submissions are **not stored yet**. Set `WAITLIST_ENDPOINT` at the top of `script.js` to a URL that accepts a JSON `POST` of:
+Submissions are sent to the Cabo backend at `https://controlpanel.caboapp.online/api/v1/waitlist` (set as `WAITLIST_ENDPOINT` at the top of `script.js`) as a JSON `POST` of:
 
 ```json
 { "name": "Tunde Bakare", "email": "tunde@example.com", "source": "website" }
 ```
 
-That can be a Cabo backend endpoint or a form service such as Formspree. Until it is set, sign-ups are only logged to the browser console. The form also has a hidden honeypot field that quietly drops bot submissions.
+They appear under **Waitlist** in the control panel, which can export them as CSV. Signing up twice with the same email is accepted without creating a duplicate. If the backend cannot be reached, the form shows an error and asks the visitor to try again. Set `WAITLIST_ENDPOINT` to an empty string to only log sign-ups to the browser console, for example while testing. The form also has a hidden honeypot field that quietly drops bot submissions.
 
 ### Logo and images
 

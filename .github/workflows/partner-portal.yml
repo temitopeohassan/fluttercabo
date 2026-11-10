@@ -35,8 +35,18 @@ jobs:
       - name: Build
         run: npm run build
 
+      # dist/ is committed so the site can be uploaded straight from the repo.
+      - name: Check the committed dist/ matches the source
+        run: |
+          if [ -n "$(git status --porcelain -- dist)" ]; then
+            git status --short -- dist
+            echo "::error::partner-portal/dist is out of date. Run 'npm run build' in partner-portal and commit dist/."
+            exit 1
+          fi
+
       - name: Upload the built site
         uses: actions/upload-artifact@v4
         with:
           name: cabo-partner-portal
           path: partner-portal/dist
+          include-hidden-files: true

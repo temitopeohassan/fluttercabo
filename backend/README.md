@@ -1,5 +1,7 @@
 # Cabo backend
 
+Live at **https://controlpanel.caboapp.online** (control panel at `/admin`, API at `/api/v1`). See [Deploying](#deploying-to-controlpanelcaboapponline) for what the server needs.
+
 Laravel 13 (PHP 8.3) and MySQL. One application serves:
 
 - **The admin control panel** at `/admin`: a server-rendered Blade app for the operations, support and finance teams.
@@ -44,7 +46,7 @@ Run it:
 php artisan serve             # http://localhost:8000/admin
 ```
 
-In production, point the web server at `backend/public`, set `APP_ENV=production`, `APP_DEBUG=false` and `APP_URL`, and run `php artisan config:cache route:cache view:cache`.
+For a server, follow [Deploying](#deploying-to-controlpanelcaboapponline) below.
 
 ### The SQL dump
 
@@ -61,6 +63,39 @@ Sessions, cache, queued jobs, sign-in codes and API tokens are left empty. The d
 ```bash
 php artisan migrate:fresh --seed && database/dump.sh
 ```
+
+## Deploying to controlpanel.caboapp.online
+
+On 10 November 2026 the domain showed a file listing of the uploaded project, and `/admin` and `/api/v1/...` returned "404 Not Found". Three things need fixing on the server.
+
+1. **PHP 8.3.** The server reported PHP 7.2.34; this app needs 8.3 or later. Change it in your hosting panel's PHP settings for the domain, and enable the `pdo_mysql`, `mbstring`, `openssl`, `tokenizer`, `xml`, `ctype`, `fileinfo`, `bcmath` and `curl` extensions.
+2. **The `vendor/` folder.** It was not uploaded, and Laravel cannot start without it. With SSH access, run `composer install --no-dev --optimize-autoloader` in the backend folder. Without SSH, download the **cabo-backend-deploy** artifact from the latest run of the Backend workflow on GitHub (Actions → Backend → the run → Artifacts). It is this folder with `vendor/` included, ready to upload.
+3. **The document root.** Point the domain at the `backend/public` folder if your hosting panel allows it. If it can only point at the uploaded folder itself, as now, the `.htaccess` file in this folder sends every request into `public/` instead. Upload it too (it is hidden). Then the app works, and `.env`, `storage/`, `database/cabo.sql` and the source code cannot be downloaded.
+
+Then set up the app on the server:
+
+1. Create a MySQL database and user in the hosting panel.
+2. Copy `.env.example` to `.env` and set:
+   ```ini
+   APP_ENV=production
+   APP_DEBUG=false
+   APP_URL=https://controlpanel.caboapp.online
+   DB_DATABASE=...   # the database, user and password from step 1
+   DB_USERNAME=...
+   DB_PASSWORD=...
+   ```
+   Set `CABO_DEMO_OTP=` (empty) once the apps are live, so sign-in codes are random.
+3. Generate `APP_KEY` with `php artisan key:generate`. Without SSH, run that command on any computer with this project and paste the resulting `APP_KEY=base64:...` line into the server's `.env`.
+4. Load the database: import `database/cabo.sql` with phpMyAdmin, or run `php artisan migrate --seed`.
+5. Make `storage/` and `bootstrap/cache/` writable by the web server.
+6. With SSH, run `php artisan config:cache && php artisan route:cache && php artisan view:cache`.
+7. Sign in at https://controlpanel.caboapp.online/admin and change the admin password straight away.
+
+To check it is working:
+- https://controlpanel.caboapp.online/up shows a green "Application up" page.
+- https://controlpanel.caboapp.online/api/v1/config returns JSON.
+- `/admin` shows the Cabo sign-in page.
+- Opening `/.env`, `/database/cabo.sql` or `/storage/logs/` is refused ("403 Forbidden" or "404 Not Found").
 
 ## Admin control panel
 
@@ -125,7 +160,7 @@ Outside production the code is always `123456` (set `CABO_DEMO_OTP` to change it
 | GET | `/attractions`, `/attractions/{slug}` | Filters: `category`, `area`, `q` |
 | POST | `/waitlist` | `{ name, email, source }`. Used by the website. Returns `201` for a new sign-up and `200` if the email is already on the list |
 
-To save sign-ups from the landing page, set `WAITLIST_ENDPOINT` in `website/script.js` to `https://<backend-host>/api/v1/waitlist`. CORS allows any origin on `/api/*`.
+The landing page's form posts to `https://controlpanel.caboapp.online/api/v1/waitlist` (`WAITLIST_ENDPOINT` in `website/script.js`). CORS allows any origin on `/api/*`.
 
 ### Rider app (`/api/v1/rider`, token with the `rider` ability)
 
