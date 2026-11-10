@@ -1,10 +1,9 @@
 // Waitlist form handling for the Cabo landing page.
 //
-// Set WAITLIST_ENDPOINT to a URL that accepts a JSON POST of
-// { name, email, source }: the Cabo backend's /api/v1/waitlist (for example
-// https://api.caboapp.online/api/v1/waitlist), or a form service such as Formspree. While it is empty, submissions are only validated and
-// logged to the console, and nothing is stored.
-const WAITLIST_ENDPOINT = '';
+// Sign-ups are posted as JSON { name, email, source } to the Cabo backend's
+// waitlist endpoint and appear under Waitlist in the control panel. Set it to
+// an empty string to only validate and log submissions to the console.
+const WAITLIST_ENDPOINT = 'https://controlpanel.caboapp.online/api/v1/waitlist';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

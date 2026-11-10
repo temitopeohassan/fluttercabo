@@ -1,0 +1,31 @@
+# Only used when the web server's document root is this backend/ folder
+# instead of backend/public (common on shared hosting). Every request is
+# sent into public/, so the app works and nothing else in this folder
+# (.env, storage, logs, the SQL dump, source code) can be downloaded.
+#
+# Pointing the domain's document root at backend/public is still better;
+# this file is then never read.
+
+Options -Indexes
+
+# Folders here (database/, storage/...) are never served, so do not redirect
+# /database to /database/.
+<IfModule mod_dir.c>
+    DirectorySlash Off
+</IfModule>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Drop trailing slashes here: once the request is inside public/,
+    # Laravel's own redirect would add /public to the address.
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Without mod_rewrite, refuse everything rather than expose the project.
+<IfModule !mod_rewrite.c>
+    Require all denied
+</IfModule>
