@@ -84,7 +84,7 @@ Then set up the app on the server:
    DB_USERNAME=...
    DB_PASSWORD=...
    ```
-   Set `CABO_DEMO_OTP=` (empty) once the apps are live, so sign-in codes are random.
+   Keep `CABO_DEMO_OTP=123456` while testing the apps: every sign-in code is then `123456` and the apps show it. Set `CABO_DEMO_OTP=` (empty) once an SMS provider is connected, so codes are random.
 3. Generate `APP_KEY` with `php artisan key:generate`. Without SSH, run that command on any computer with this project and paste the resulting `APP_KEY=base64:...` line into the server's `.env`.
 4. Load the database: import `database/cabo.sql` with phpMyAdmin, or run `php artisan migrate --seed`.
 5. Make `storage/` and `bootstrap/cache/` writable by the web server.
@@ -145,19 +145,22 @@ POST /api/v1/rider/auth/verify   { "identifier": "+447700900123", "code": "12345
 
 Send the token on later requests as `Authorization: Bearer <token>`. Drivers use the same flow under `/driver/auth/...`. A rider token cannot call driver endpoints, and a driver token cannot call rider endpoints.
 
-Outside production the code is always `123456` (set `CABO_DEMO_OTP` to change it), and the `otp` response includes it as `debug_code`. In production the code is random. Codes are written to the log until an SMS or email provider is connected in `app/Services/OtpService.php`.
+**Demo codes.** When `CABO_DEMO_OTP` is set in `.env` (in any environment, production included), every code is that value and the `otp` response includes it as `debug_code`. The Guest and Host apps show it on the code screen. Outside production it defaults to `123456`; in production it is off unless you set it.
+
+**Real codes.** With `CABO_DEMO_OTP` empty, codes are random and `debug_code` is null. A code for an email address is sent by email, using the `MAIL_*` settings in `.env`. A code for a phone number is only written to the log until an SMS provider is connected in `app/Services/OtpService.php`, so phone sign-in needs the demo code until then.
 
 ### Public
 
 | Method | Path | |
 | --- | --- | --- |
-| GET | `/config` | Exchange rates, waiting and cancellation rules, driver rules, support contacts, service areas, ride types |
+| GET | `/config` | Exchange rates, waiting and cancellation rules, stop fee, tour rules, driver rules, support contacts, service areas with their surge, ride types |
 | GET | `/ride-types` | |
 | GET | `/tour-categories` | |
 | GET | `/tours` | Filters: `category` (slug), `q`, `max_price`, `date`, `wheelchair`, `featured`, `sort=popular\|rating\|price_low\|price_high` |
 | GET | `/tours/{slug}` | Includes the latest reviews |
 | GET | `/tours/{slug}/slots` | The next 30 days, with `remaining` places |
 | GET | `/attractions`, `/attractions/{slug}` | Filters: `category`, `area`, `q` |
+| GET | `/places` | Named places with coordinates: airport terminals, attractions, tour meeting points and service areas. Filters: `q`, and `kind` (`airport`, `attraction`, `meeting_point`, `area`; comma-separated). `kind=attraction` is the list of **tourism locations a ride can go to** |
 | POST | `/waitlist` | `{ name, email, source }`. Used by the website. Returns `201` for a new sign-up and `200` if the email is already on the list |
 
 The landing page's form posts to `https://controlpanel.caboapp.online/api/v1/waitlist` (`WAITLIST_ENDPOINT` in `website/script.js`). CORS allows any origin on `/api/*`.
@@ -169,7 +172,7 @@ The landing page's form posts to `https://controlpanel.caboapp.online/api/v1/wai
 | GET, PATCH, DELETE | `/me` | Profile: name, nationality, home currency, traveller type, language, accessibility |
 | GET, POST, PUT, DELETE | `/emergency-contacts[/{id}]` | Up to 5 contacts |
 | GET, POST, PUT, DELETE | `/saved-places[/{id}]` | |
-| POST | `/fare-estimates` | `pickup_lat/lng`, `dropoff_lat/lng`, optional `stops[]`, `promo_code`. Returns an upfront price for every ride type |
+| POST | `/fare-estimates` | `pickup_lat/lng`, `dropoff_lat/lng`, optional `stops[]`, `promo_code`. Returns an upfront price for every ride type. The drop-off and every stop must be a tourism location (see below) |
 | GET, POST | `/trips` | Book a ride: the route plus `ride_type`, `pickup_address`, `dropoff_address`, `payment_method` (`card`, `wallet`, `bank_transfer` or `cash`), and optional `scheduled_at` |
 | GET | `/trips/{id}` | Includes the PIN to give the driver, the driver's live location and any waiting fee |
 | POST | `/trips/{id}/cancel` | Free before a driver accepts and for 2 minutes after; then a ₦500 fee |
@@ -189,6 +192,8 @@ The landing page's form posts to `https://controlpanel.caboapp.online/api/v1/wai
 | POST | `/wallet/top-up` | `amount`, `method` |
 | GET | `/wallet/transactions` | |
 | POST | `/promo-codes/validate` | `code`, `service`, optional `amount` |
+
+**Rides only go to tourism locations.** The drop-off, and any stop, must be within 300 m of a published attraction. Anything else is refused with a `422` and an error on `dropoff` or `stops`, on `/fare-estimates`, `/trips` and `/trips/{id}/stops`. The pickup can be anywhere. Add or remove destinations under Attractions in the admin panel.
 
 ### Driver app (`/api/v1/driver`, token with the `driver` ability)
 
@@ -219,6 +224,7 @@ The landing page's form posts to `https://controlpanel.caboapp.online/api/v1/wai
 | POST | `/jobs/tours/{slot}/complete` | |
 | GET | `/earnings` | `period=today\|week\|month`: trips, earnings, tips, commission, per-day totals, balance, cash owed, next payout date |
 | GET | `/earnings/transactions`, `/payouts` | |
+| GET | `/performance` | Rating with a breakdown by stars, recent rider feedback, acceptance and cancellation rates, trips completed, tier, tour guide and training status |
 | POST | `/payouts/instant` | Instant cash-out. Cash commission owed is settled first, then a 1.5% fee is taken |
 
 ### Shared (both apps, under `/rider/...` or `/driver/...`)
@@ -255,8 +261,9 @@ php artisan test
 The tests use an in-memory SQLite database seeded with the sample data. They cover:
 
 - Admin sign-in with the seeded account, every admin page loading, and role limits.
-- Rider and driver sign-in with a code.
+- Rider and driver sign-in with a code, demo codes in production, and emailed codes.
 - Fare estimates, and a full ride from request to PIN to completion to rating and tip.
+- Rides being refused unless the destination is a tourism location.
 - Two drivers accepting the same request, cancellation fees, and cash rides.
 - Tour booking capacity, promo codes and add-ons, refunds, and reviews only after check-in.
 - The rules for a driver going online, and instant cash-out.
@@ -271,6 +278,6 @@ The **Backend** GitHub Actions workflow runs the tests on SQLite. It then import
 These parts are recorded in the database but not yet connected to an outside service:
 
 - **Card and bank payments.** Charges and refunds are written to the `transactions` table. Connect a payment provider (for example Paystack or Flutterwave) in `app/Services/Wallet.php` and in the wallet top-up endpoint.
-- **SMS and email sign-in codes.** These are logged only; see `app/Services/OtpService.php`.
+- **SMS sign-in codes.** These are logged only; see `app/Services/OtpService.php`. Email codes are sent with Laravel mail.
 - **Push notifications.** These are stored in `app_notifications` and returned by the `/notifications` endpoint.
 - **Driver document files.** These are stored on the `local` disk under `storage/app/private/documents`. The sample data has no real files, so download links say so.

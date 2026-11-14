@@ -53,13 +53,7 @@ class CaboMap extends StatelessWidget {
             children: [
               Positioned.fill(
                 child: CustomPaint(
-                  painter: _MapPainter(
-                    route: route,
-                    heat: heat,
-                    routeColor: routeColor,
-                    serviceArea: serviceArea,
-                    labels: labels,
-                  ),
+                  painter: _MapPainter(route: route, heat: heat, routeColor: routeColor, serviceArea: serviceArea, labels: labels),
                 ),
               ),
               for (final z in heat)
@@ -70,32 +64,17 @@ class CaboMap extends StatelessWidget {
                     width: 100,
                     child: Center(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.55),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.55), borderRadius: BorderRadius.circular(20)),
                         child: Text(
                           z.label!,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
                         ),
                       ),
                     ),
                   ),
               for (final m in markers) _positioned(m, w, h),
-              if (dimmed)
-                Positioned.fill(
-                  child: ColoredBox(
-                    color: Colors.black.withValues(alpha: 0.55),
-                  ),
-                ),
+              if (dimmed) Positioned.fill(child: ColoredBox(color: Colors.black.withValues(alpha: 0.55))),
             ],
           ),
         );
@@ -113,30 +92,12 @@ class CaboMap extends StatelessWidget {
           color: CaboColors.yellow,
           shape: BoxShape.circle,
           border: Border.all(color: Colors.white, width: 3),
-          boxShadow: [
-            BoxShadow(
-              color: CaboColors.yellow.withValues(alpha: 0.4),
-              blurRadius: 16,
-              spreadRadius: 4,
-            ),
-          ],
+          boxShadow: [BoxShadow(color: CaboColors.yellow.withValues(alpha: 0.4), blurRadius: 16, spreadRadius: 4)],
         ),
-        child: const Icon(
-          Icons.navigation_rounded,
-          color: CaboColors.onYellow,
-          size: 22,
-        ),
+        child: const Icon(Icons.navigation_rounded, color: CaboColors.onYellow, size: 22),
       ),
-      MarkerKind.pickup => const Icon(
-        Icons.location_on,
-        color: CaboColors.brightGreen,
-        size: size,
-      ),
-      MarkerKind.dropoff => const Icon(
-        Icons.location_on,
-        color: CaboColors.red,
-        size: size,
-      ),
+      MarkerKind.pickup => const Icon(Icons.location_on, color: CaboColors.brightGreen, size: size),
+      MarkerKind.dropoff => const Icon(Icons.location_on, color: CaboColors.red, size: size),
       MarkerKind.stop => Container(
         width: 26,
         height: 26,
@@ -149,10 +110,7 @@ class CaboMap extends StatelessWidget {
       MarkerKind.airport => Container(
         width: 38,
         height: 38,
-        decoration: const BoxDecoration(
-          color: CaboColors.blue,
-          shape: BoxShape.circle,
-        ),
+        decoration: const BoxDecoration(color: CaboColors.blue, shape: BoxShape.circle),
         child: const Icon(Icons.flight, color: Colors.white, size: 20),
       ),
     };
@@ -169,19 +127,12 @@ class CaboMap extends StatelessWidget {
             Container(
               margin: const EdgeInsets.only(top: 2),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-              ),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
               child: Text(
                 m.label!,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: CaboColors.onYellow,
-                ),
+                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: CaboColors.onYellow),
               ),
             ),
         ],
@@ -191,13 +142,7 @@ class CaboMap extends StatelessWidget {
 }
 
 class _MapPainter extends CustomPainter {
-  _MapPainter({
-    required this.route,
-    required this.heat,
-    required this.routeColor,
-    required this.serviceArea,
-    required this.labels,
-  });
+  _MapPainter({required this.route, required this.heat, required this.routeColor, required this.serviceArea, required this.labels});
 
   final List<Offset> route;
   final List<HeatZone> heat;
@@ -227,10 +172,7 @@ class _MapPainter extends CustomPainter {
       for (var y = -h * 0.2; y < h * 1.2; y += 38) {
         if (rnd.nextDouble() < 0.8) {
           canvas.drawRRect(
-            RRect.fromRectAndRadius(
-              Rect.fromLTWH(x + 4, y + 4, 38 + rnd.nextDouble() * 4, 30),
-              const Radius.circular(3),
-            ),
+            RRect.fromRectAndRadius(Rect.fromLTWH(x + 4, y + 4, 38 + rnd.nextDouble() * 4, 30), const Radius.circular(3)),
             block,
           );
         }
@@ -288,11 +230,7 @@ class _MapPainter extends CustomPainter {
       major,
     );
     // Third Mainland Bridge across the lagoon.
-    canvas.drawLine(
-      Offset(w * 0.05, h * 0.2),
-      Offset(w * 0.42, h * 0.62),
-      major,
-    );
+    canvas.drawLine(Offset(w * 0.05, h * 0.2), Offset(w * 0.42, h * 0.62), major);
 
     if (labels) {
       for (final (text, x, y) in const [
@@ -305,12 +243,7 @@ class _MapPainter extends CustomPainter {
         final tp = TextPainter(
           text: TextSpan(
             text: text,
-            style: TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.5,
-              color: Colors.white.withValues(alpha: 0.32),
-            ),
+            style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.5, color: Colors.white.withValues(alpha: 0.32)),
           ),
           textDirection: TextDirection.ltr,
         )..layout();
@@ -326,27 +259,15 @@ class _MapPainter extends CustomPainter {
         c,
         r,
         Paint()
-          ..shader = RadialGradient(
-            colors: [
-              color.withValues(alpha: 0.55),
-              color.withValues(alpha: 0.0),
-            ],
-          ).createShader(Rect.fromCircle(center: c, radius: r)),
+          ..shader = RadialGradient(colors: [color.withValues(alpha: 0.55), color.withValues(alpha: 0.0)])
+              .createShader(Rect.fromCircle(center: c, radius: r)),
       );
     }
 
     if (serviceArea) {
       final area = Path()
-        ..addRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromLTWH(w * 0.08, h * 0.05, w * 0.7, h * 0.62),
-            const Radius.circular(40),
-          ),
-        );
-      canvas.drawPath(
-        area,
-        Paint()..color = CaboColors.brightGreen.withValues(alpha: 0.10),
-      );
+        ..addRRect(RRect.fromRectAndRadius(Rect.fromLTWH(w * 0.08, h * 0.05, w * 0.7, h * 0.62), const Radius.circular(40)));
+      canvas.drawPath(area, Paint()..color = CaboColors.brightGreen.withValues(alpha: 0.10));
       canvas.drawPath(
         area,
         Paint()
@@ -383,43 +304,19 @@ class _MapPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _MapPainter old) =>
-      old.route != route || old.heat != heat || old.serviceArea != serviceArea;
+  bool shouldRepaint(covariant _MapPainter old) => old.route != route || old.heat != heat || old.serviceArea != serviceArea;
 }
 
 /// Common routes used by the trip screens.
 class Routes {
-  static const toPickup = [
-    Offset(0.3, 0.78),
-    Offset(0.3, 0.6),
-    Offset(0.52, 0.56),
-    Offset(0.56, 0.36),
-  ];
-  static const trip = [
-    Offset(0.56, 0.36),
-    Offset(0.62, 0.52),
-    Offset(0.78, 0.6),
-    Offset(0.8, 0.82),
-  ];
-  static const airport = [
-    Offset(0.2, 0.1),
-    Offset(0.25, 0.3),
-    Offset(0.42, 0.6),
-    Offset(0.6, 0.62),
-    Offset(0.62, 0.75),
-  ];
+  static const toPickup = [Offset(0.3, 0.78), Offset(0.3, 0.6), Offset(0.52, 0.56), Offset(0.56, 0.36)];
+  static const trip = [Offset(0.56, 0.36), Offset(0.62, 0.52), Offset(0.78, 0.6), Offset(0.8, 0.82)];
+  static const airport = [Offset(0.2, 0.1), Offset(0.25, 0.3), Offset(0.42, 0.6), Offset(0.6, 0.62), Offset(0.62, 0.75)];
 }
 
 /// Full-screen map with an optional overlay on top and a panel at the bottom.
 class MapLayout extends StatelessWidget {
-  const MapLayout({
-    super.key,
-    required this.map,
-    required this.panel,
-    this.top,
-    this.bottomNav,
-    this.panelColor = CaboColors.deepGreen,
-  });
+  const MapLayout({super.key, required this.map, required this.panel, this.top, this.bottomNav, this.panelColor = CaboColors.deepGreen});
 
   final Widget map;
   final Widget panel;
@@ -440,10 +337,7 @@ class MapLayout extends StatelessWidget {
                   SafeArea(
                     child: Align(
                       alignment: Alignment.topCenter,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                        child: top,
-                      ),
+                      child: Padding(padding: const EdgeInsets.fromLTRB(16, 8, 16, 0), child: top),
                     ),
                   ),
               ],
@@ -453,17 +347,12 @@ class MapLayout extends StatelessWidget {
             width: double.infinity,
             decoration: BoxDecoration(
               color: panelColor,
-              border: const Border(
-                top: BorderSide(color: CaboColors.surfaceHigh, width: 1),
-              ),
+              border: const Border(top: BorderSide(color: CaboColors.surfaceHigh, width: 1)),
             ),
             child: SafeArea(
               top: false,
               bottom: bottomNav == null,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
-                child: panel,
-              ),
+              child: Padding(padding: const EdgeInsets.fromLTRB(20, 18, 20, 18), child: panel),
             ),
           ),
         ],
@@ -475,13 +364,7 @@ class MapLayout extends StatelessWidget {
 
 /// Turn-by-turn instruction banner shown over the map.
 class NavInstruction extends StatelessWidget {
-  const NavInstruction({
-    super.key,
-    required this.distance,
-    required this.street,
-    this.then,
-    this.icon = Icons.turn_right_rounded,
-  });
+  const NavInstruction({super.key, required this.distance, required this.street, this.then, this.icon = Icons.turn_right_rounded});
 
   final String distance;
   final String street;
@@ -508,11 +391,7 @@ class NavInstruction extends StatelessWidget {
               children: [
                 Text(distance, style: CaboText.h1.copyWith(fontSize: 28)),
                 Text(street, style: CaboText.h3),
-                if (then != null)
-                  Text(
-                    'Then: $then',
-                    style: CaboText.muted.copyWith(color: Colors.white70),
-                  ),
+                if (then != null) Text('Then: $then', style: CaboText.muted.copyWith(color: Colors.white70)),
               ],
             ),
           ),

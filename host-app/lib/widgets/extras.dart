@@ -32,31 +32,17 @@ class DriverNav extends StatelessWidget {
               for (var i = 0; i < tabs.length; i++)
                 Expanded(
                   child: InkWell(
-                    onTap: i == current
-                        ? null
-                        : () =>
-                              Navigator.of(context)
-                                  .pushReplacementNamed(tabs[i].$3),
+                    onTap: i == current ? null : () => Navigator.of(context).pushReplacementNamed(tabs[i].$3),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 4,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                           decoration: BoxDecoration(
-                            color: i == current
-                                ? CaboColors.yellow.withValues(alpha: 0.18)
-                                : Colors.transparent,
+                            color: i == current ? CaboColors.yellow.withValues(alpha: 0.18) : Colors.transparent,
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: Icon(
-                            tabs[i].$1,
-                            color: i == current
-                                ? CaboColors.yellow
-                                : CaboColors.muted,
-                          ),
+                          child: Icon(tabs[i].$1, color: i == current ? CaboColors.yellow : CaboColors.muted),
                         ),
                         const SizedBox(height: 3),
                         Text(
@@ -64,9 +50,7 @@ class DriverNav extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: i == current
-                                ? CaboColors.yellow
-                                : CaboColors.muted,
+                            color: i == current ? CaboColors.yellow : CaboColors.muted,
                           ),
                         ),
                       ],
@@ -104,7 +88,7 @@ class BarChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maxV = values.reduce(max);
+    final maxV = max(values.reduce(max), 1.0);
     final maxS = secondary == null ? 1.0 : secondary!.reduce(max);
     return SizedBox(
       height: height,
@@ -119,42 +103,23 @@ class BarChart extends StatelessWidget {
                   if (valueLabel != null && i == highlight)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        valueLabel!(values[i]),
-                        style: CaboText.label.copyWith(
-                          color: CaboColors.yellow,
-                          fontSize: 10,
-                        ),
-                      ),
+                      child: Text(valueLabel!(values[i]), style: CaboText.label.copyWith(color: CaboColors.yellow, fontSize: 10)),
                     ),
                   Expanded(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        _bar(
-                          values[i] / maxV,
-                          i == highlight ? CaboColors.yellow : color,
-                        ),
+                        _bar(values[i] / maxV, i == highlight ? CaboColors.yellow : color),
                         if (secondary != null) ...[
                           const SizedBox(width: 3),
-                          _bar(
-                            secondary![i] / maxS,
-                            CaboColors.blue.withValues(alpha: 0.8),
-                          ),
+                          _bar(secondary![i] / maxS, CaboColors.blue.withValues(alpha: 0.8)),
                         ],
                       ],
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    labels[i],
-                    style: CaboText.label.copyWith(
-                      color: i == highlight
-                          ? CaboColors.yellow
-                          : CaboColors.muted,
-                    ),
-                  ),
+                  Text(labels[i], style: CaboText.label.copyWith(color: i == highlight ? CaboColors.yellow : CaboColors.muted)),
                 ],
               ),
             ),
@@ -167,24 +132,14 @@ class BarChart extends StatelessWidget {
     heightFactor: max(fraction, 0.04),
     child: Container(
       width: secondary == null ? 22 : 12,
-      decoration: BoxDecoration(
-        color: c,
-        borderRadius: BorderRadius.circular(6),
-      ),
+      decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(6)),
     ),
   );
 }
 
 /// Circular progress ring with content in the middle.
 class Ring extends StatelessWidget {
-  const Ring({
-    super.key,
-    required this.value,
-    required this.child,
-    this.size = 120,
-    this.color = CaboColors.yellow,
-    this.stroke = 10,
-  });
+  const Ring({super.key, required this.value, required this.child, this.size = 120, this.color = CaboColors.yellow, this.stroke = 10});
 
   final double value;
   final Widget child;
@@ -231,17 +186,12 @@ class _RingPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _RingPainter old) =>
-      old.value != value || old.color != color;
+  bool shouldRepaint(covariant _RingPainter old) => old.value != value || old.color != color;
 }
 
 /// "Slide to complete" control used to end a trip.
 class SlideToComplete extends StatefulWidget {
-  const SlideToComplete({
-    super.key,
-    required this.label,
-    required this.onComplete,
-  });
+  const SlideToComplete({super.key, required this.label, required this.onComplete});
   final String label;
   final VoidCallback onComplete;
 
@@ -269,16 +219,12 @@ class _SlideToCompleteState extends State<SlideToComplete> {
             alignment: Alignment.centerLeft,
             children: [
               Center(
-                child: Text(
-                  widget.label,
-                  style: CaboText.h3.copyWith(color: CaboColors.brightGreen),
-                ),
+                child: Text(widget.label, style: CaboText.h3.copyWith(color: CaboColors.brightGreen)),
               ),
               Positioned(
                 left: 4 + dx,
                 child: GestureDetector(
-                  onHorizontalDragUpdate: (d) =>
-                      setState(() => dx = (dx + d.delta.dx).clamp(0, maxDx)),
+                  onHorizontalDragUpdate: (d) => setState(() => dx = (dx + d.delta.dx).clamp(0, maxDx)),
                   onHorizontalDragEnd: (_) {
                     if (dx > maxDx * 0.85) {
                       widget.onComplete();
@@ -288,15 +234,8 @@ class _SlideToCompleteState extends State<SlideToComplete> {
                   child: Container(
                     width: knob,
                     height: knob,
-                    decoration: const BoxDecoration(
-                      color: CaboColors.brightGreen,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.double_arrow_rounded,
-                      color: CaboColors.onYellow,
-                      size: 30,
-                    ),
+                    decoration: const BoxDecoration(color: CaboColors.brightGreen, shape: BoxShape.circle),
+                    child: const Icon(Icons.double_arrow_rounded, color: CaboColors.onYellow, size: 30),
                   ),
                 ),
               ),
@@ -319,11 +258,7 @@ class Pulse extends StatefulWidget {
 }
 
 class _PulseState extends State<Pulse> with SingleTickerProviderStateMixin {
-  late final AnimationController c = AnimationController(
-    vsync: this,
-    duration: const Duration(seconds: 2),
-    value: 0.55,
-  );
+  late final AnimationController c = AnimationController(vsync: this, duration: const Duration(seconds: 2), value: 0.55);
 
   @override
   void initState() {
@@ -352,9 +287,7 @@ class _PulseState extends State<Pulse> with SingleTickerProviderStateMixin {
               height: widget.size * c.value,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: CaboColors.brightGreen.withValues(
-                  alpha: 0.45 * (1 - c.value),
-                ),
+                color: CaboColors.brightGreen.withValues(alpha: 0.45 * (1 - c.value)),
               ),
             ),
             Container(
@@ -402,10 +335,7 @@ class CodeBoxes extends StatelessWidget {
                 width: i == code.length ? 2 : 1,
               ),
             ),
-            child: Text(
-              i < code.length ? code[i] : '',
-              style: CaboText.h1.copyWith(fontSize: length > 4 ? 24 : 30),
-            ),
+            child: Text(i < code.length ? code[i] : '', style: CaboText.h1.copyWith(fontSize: length > 4 ? 24 : 30)),
           ),
       ],
     );

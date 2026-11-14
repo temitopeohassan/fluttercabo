@@ -12,10 +12,7 @@ class GalleryScreen extends StatelessWidget {
     return CaboScaffold(
       title: 'All screens',
       children: [
-        Text(
-          'Every screen in this build, numbered as in the Cabo Host spec.',
-          style: CaboText.muted,
-        ),
+        Text('Every screen in this build, numbered as in the Cabo Host spec.', style: CaboText.muted),
         for (final section in sectionNames.entries) ...[
           SectionTitle('${section.key}. ${section.value}'),
           for (final s in screens.where((s) => s.section == section.key))

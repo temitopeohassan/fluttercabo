@@ -82,18 +82,14 @@ class CaboText {
 }
 
 ThemeData buildCaboTheme() {
-  final scheme =
-      ColorScheme.fromSeed(
-        seedColor: CaboColors.green,
-        brightness: Brightness.dark,
-      ).copyWith(
-        primary: CaboColors.yellow,
-        onPrimary: CaboColors.onYellow,
-        secondary: CaboColors.brightGreen,
-        surface: CaboColors.deepGreen,
-        onSurface: CaboColors.text,
-        error: CaboColors.red,
-      );
+  final scheme = ColorScheme.fromSeed(seedColor: CaboColors.green, brightness: Brightness.dark).copyWith(
+    primary: CaboColors.yellow,
+    onPrimary: CaboColors.onYellow,
+    secondary: CaboColors.brightGreen,
+    surface: CaboColors.deepGreen,
+    onSurface: CaboColors.text,
+    error: CaboColors.red,
+  );
   return ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
@@ -108,11 +104,7 @@ ThemeData buildCaboTheme() {
       centerTitle: true,
       titleTextStyle: CaboText.h3,
     ),
-    dividerTheme: const DividerThemeData(
-      color: CaboColors.outline,
-      thickness: 1,
-      space: 1,
-    ),
+    dividerTheme: const DividerThemeData(color: CaboColors.outline, thickness: 1, space: 1),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: CaboColors.surface,
@@ -133,24 +125,12 @@ ThemeData buildCaboTheme() {
       ),
     ),
     switchTheme: SwitchThemeData(
-      thumbColor: WidgetStateProperty.resolveWith(
-        (s) => s.contains(WidgetState.selected)
-            ? CaboColors.onYellow
-            : CaboColors.muted,
-      ),
-      trackColor: WidgetStateProperty.resolveWith(
-        (s) => s.contains(WidgetState.selected)
-            ? CaboColors.yellow
-            : CaboColors.surfaceHigh,
-      ),
+      thumbColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? CaboColors.onYellow : CaboColors.muted),
+      trackColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? CaboColors.yellow : CaboColors.surfaceHigh),
       trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
     ),
     checkboxTheme: CheckboxThemeData(
-      fillColor: WidgetStateProperty.resolveWith(
-        (s) => s.contains(WidgetState.selected)
-            ? CaboColors.yellow
-            : Colors.transparent,
-      ),
+      fillColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? CaboColors.yellow : Colors.transparent),
       checkColor: const WidgetStatePropertyAll(CaboColors.onYellow),
       side: const BorderSide(color: CaboColors.muted, width: 1.5),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
@@ -160,9 +140,6 @@ ThemeData buildCaboTheme() {
       thumbColor: CaboColors.yellow,
       inactiveTrackColor: CaboColors.surfaceHigh,
     ),
-    progressIndicatorTheme: const ProgressIndicatorThemeData(
-      color: CaboColors.yellow,
-      linearTrackColor: CaboColors.surfaceHigh,
-    ),
+    progressIndicatorTheme: const ProgressIndicatorThemeData(color: CaboColors.yellow, linearTrackColor: CaboColors.surfaceHigh),
   );
 }

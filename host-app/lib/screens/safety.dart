@@ -1,82 +1,59 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../widgets/widgets.dart';
 
 // 7. Safety and support.
+
+String _emergency(AppState state) => state.config.obj('support')?.str('emergency_number', '112') ?? '112';
+String _short(String address) => address.split(',').first;
 
 class SafetyToolkitScreen extends StatelessWidget {
   const SafetyToolkitScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final state = AppScope.read(context);
     return CaboScaffold(
       title: 'Safety toolkit',
       children: [
+        const SizedBox(height: 8),
         Center(
-          child: GestureDetector(
-            onTap: () => go(context, '/emergency'),
-            child: Container(
-              width: 170,
-              height: 170,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: CaboColors.red.withValues(alpha: 0.18),
-              ),
-              child: Center(
-                child: Container(
-                  width: 128,
-                  height: 128,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: CaboColors.red,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'SOS',
-                        style: CaboText.display.copyWith(fontSize: 36),
-                      ),
-                      Text(
-                        'Hold for 2 s',
-                        style: CaboText.label.copyWith(color: Colors.white),
-                      ),
-                    ],
+          child: Semantics(
+            button: true,
+            label: 'Emergency SOS',
+            child: GestureDetector(
+              onTap: () => go(context, '/emergency'),
+              child: Container(
+                width: 170,
+                height: 170,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: CaboColors.red.withValues(alpha: 0.2)),
+                child: Center(
+                  child: Container(
+                    width: 130,
+                    height: 130,
+                    decoration: const BoxDecoration(shape: BoxShape.circle, color: CaboColors.red),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('SOS', style: CaboText.display.copyWith(fontSize: 36)),
+                        Text('Tap for help', style: CaboText.label.copyWith(color: Colors.white)),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Center(
           child: Text(
-            'Calls emergency services and alerts Cabo Safety',
+            'Alerts Cabo\'s safety team with your location, and lets you call ${_emergency(state)}',
             style: CaboText.muted,
             textAlign: TextAlign.center,
           ),
         ),
-        const SectionTitle('Share trip'),
-        const ToggleTile(
-          'Share every trip automatically',
-          subtitle: 'Trusted contacts can follow your live location',
-          icon: Icons.share_location_rounded,
-        ),
-        for (final (initials, name, rel) in const [
-          ('NN', 'Ngozi Nwosu', 'Wife'),
-          ('CN', 'Chidi Nwosu', 'Brother'),
-        ])
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(
-              children: [
-                Avatar(initials, size: 40, color: CaboColors.yellowSoft),
-                const SizedBox(width: 12),
-                Expanded(child: Text(name, style: CaboText.body)),
-                Text(rel, style: CaboText.muted),
-              ],
-            ),
-          ),
         const SectionTitle('Tools'),
         MenuTile(
           icon: Icons.report_rounded,
@@ -86,171 +63,235 @@ class SafetyToolkitScreen extends StatelessWidget {
           onTap: () => go(context, '/report-incident'),
         ),
         MenuTile(
-          icon: Icons.inventory_2_rounded,
-          title: 'Lost items',
-          subtitle: '1 item reported by a rider',
+          icon: Icons.backpack_rounded,
+          title: 'Found an item',
+          subtitle: 'Tell us about something a rider left behind',
+          color: CaboColors.blue,
           onTap: () => go(context, '/lost-item'),
         ),
+        MenuTile(icon: Icons.support_agent_rounded, title: 'Help centre', onTap: () => go(context, '/help')),
         const SectionTitle('Safety tips'),
-        SizedBox(
-          height: 130,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              for (final (icon, tip) in const [
-                (
-                  Icons.verified_user_rounded,
-                  'Always verify the rider PIN before starting',
-                ),
-                (
-                  Icons.nightlight_round,
-                  'Use well-lit pickup points after dark',
-                ),
-                (
-                  Icons.speed_rounded,
-                  'Stay within speed limits on Third Mainland',
-                ),
-              ])
-                Container(
-                  width: 210,
-                  margin: const EdgeInsets.only(right: 10),
-                  child: CaboCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(icon, color: CaboColors.yellow),
-                        const SizedBox(height: 8),
-                        Text(tip, style: CaboText.body.copyWith(fontSize: 13)),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
+        for (final (icon, tip) in const [
+          (Icons.pin_rounded, 'Only start a trip once the rider gives you their 4-digit PIN'),
+          (Icons.groups_rounded, 'Do not carry more passengers than your vehicle has seats'),
+          (Icons.nightlight_round, 'At night, wait until your rider is safely inside before leaving'),
+        ])
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(
+              children: [
+                Icon(icon, color: CaboColors.yellow),
+                const SizedBox(width: 12),
+                Expanded(child: Text(tip, style: CaboText.body)),
+              ],
+            ),
           ),
-        ),
       ],
     );
   }
 }
 
-class EmergencyScreen extends StatelessWidget {
+class EmergencyScreen extends StatefulWidget {
   const EmergencyScreen({super.key});
 
   @override
+  State<EmergencyScreen> createState() => _EmergencyScreenState();
+}
+
+class _EmergencyScreenState extends State<EmergencyScreen> {
+  LatLng? _here;
+  Json? _alert;
+  bool _started = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    AppScope.read(context).location.current().then((p) {
+      if (mounted) setState(() => _here = p);
+    }, onError: (_) {});
+  }
+
+  Future<void> _raise() async {
+    final state = AppScope.read(context);
+    final res = await state.api.post('/driver/sos', {
+      if (state.onTrip) 'trip_id': state.trip!.integer('id'),
+      if (_here != null) ...{'lat': _here!.lat, 'lng': _here!.lng},
+    });
+    if (mounted) setState(() => _alert = (unwrap(res) as Json?) ?? {});
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final state = AppScope.read(context);
+    final number = _emergency(state);
+    final trip = state.onTrip ? state.trip : null;
+    final v = state.vehicle;
+    final sent = _alert != null;
     return Scaffold(
-      backgroundColor: const Color(0xFF3A0D10),
+      backgroundColor: const Color(0xFF3A0D12),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF3A0D10),
+        backgroundColor: const Color(0xFF3A0D12),
         automaticallyImplyLeading: false,
-        leading: IconButton(
-          icon: const Icon(Icons.close_rounded),
-          onPressed: () => back(context),
-        ),
+        leading: IconButton(tooltip: 'Close', icon: const Icon(Icons.close_rounded), onPressed: () => back(context)),
         title: const Text('Emergency'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          Text(
-            'Stay calm. Help is on the way.',
-            style: CaboText.h1,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
+          Text(sent ? 'Cabo\'s safety team has your alert.' : 'Stay calm. Get help now.', style: CaboText.h1, textAlign: TextAlign.center),
+          const SizedBox(height: 20),
           CaboButton(
-            'Call 112',
+            'Call $number',
             icon: Icons.call_rounded,
             style: CaboButtonStyle.danger,
             height: 72,
-            onPressed: () {},
+            onPressed: () => callNumber(context, number),
           ),
           const SizedBox(height: 12),
-          CaboButton(
-            'Alert Cabo Safety team',
-            icon: Icons.support_agent_rounded,
-            style: CaboButtonStyle.light,
-            height: 64,
-            onPressed: () {},
-          ),
-          const SizedBox(height: 24),
+          if (sent)
+            const Center(
+              child: Pill('Alert sent to Cabo Safety', color: CaboColors.brightGreen, icon: Icons.check),
+            )
+          else
+            ActionButton(
+              'Alert Cabo Safety',
+              icon: Icons.shield_rounded,
+              style: CaboButtonStyle.light,
+              busyLabel: 'Sending…',
+              onPressed: _raise,
+            ),
+          const SizedBox(height: 20),
           CaboCard(
-            color: Colors.white.withValues(alpha: 0.08),
+            color: Colors.black26,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Text('Your location', style: CaboText.label.copyWith(color: Colors.white70)),
+                const SizedBox(height: 6),
+                Text(
+                  _here == null ? 'Finding your position…' : '${_here!.lat.toStringAsFixed(4)}° N, ${_here!.lng.toStringAsFixed(4)}° E',
+                  style: CaboText.h3,
+                ),
+                Text(
+                  sent && _here != null ? 'Sent with your alert' : 'Sent with your alert when you press the button',
+                  style: CaboText.muted,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (trip != null || v != null)
+            CaboCard(
+              color: Colors.black26,
+              child: Column(
+                children: [
+                  if (trip != null)
+                    InfoRow('Current trip', '${_short(trip.str('pickup_address'))} → ${_short(trip.str('dropoff_address'))}'),
+                  if (v != null) InfoRow('Vehicle', '${v.str('colour')} ${v.str('make')} ${v.str('model')} • ${v.str('plate_number')}'),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A form that opens a support ticket about a trip.
+class _TicketForm extends StatefulWidget {
+  const _TicketForm({required this.title, required this.heading, required this.kinds, required this.hint, this.intro});
+  final String title;
+  final String heading;
+  final String? intro;
+  final String hint;
+
+  /// Category code, label and optional note for each choice.
+  final List<(String, String, String?)> kinds;
+
+  @override
+  State<_TicketForm> createState() => _TicketFormState();
+}
+
+class _TicketFormState extends State<_TicketForm> {
+  final _details = TextEditingController();
+  int _kind = 0;
+  String? _error;
+
+  @override
+  void dispose() {
+    _details.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send(Json? trip) async {
+    final text = _details.text.trim();
+    if (text.length < 5) {
+      setState(() => _error = 'Tell us what happened.');
+      return;
+    }
+    setState(() => _error = null);
+    final state = AppScope.read(context);
+    final ticket = unwrap(
+      await state.api.post('/driver/support/tickets', {
+        'category': widget.kinds[_kind].$1,
+        'subject': widget.kinds[_kind].$2,
+        'message': text,
+        'trip_id': ?trip?.integer('id'),
+      }),
+    ) as Json;
+    state.select(ticket: ticket);
+    if (mounted) replace(context, '/support-chat');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = AppScope.read(context);
+    return Loader<Json?>(
+      load: () async {
+        if (state.pastTrip != null) return state.pastTrip;
+        if (state.trip != null) return state.trip;
+        return (await state.api.get('/driver/trips') as Json).list('data').firstOrNull;
+      },
+      builder: (context, trip, _) => CaboScaffold(
+        title: widget.title,
+        bottom: ActionButton('Send to support', onPressed: () => _send(trip)),
+        children: [
+          Text(widget.heading, style: CaboText.h2),
+          if (widget.intro != null) ...[const SizedBox(height: 6), Text(widget.intro!, style: CaboText.muted)],
+          const SizedBox(height: 16),
+          if (widget.kinds.length > 1)
+            SingleChoice(initial: _kind, options: [for (final k in widget.kinds) (k.$2, k.$3)], onChanged: (i) => _kind = i),
+          if (trip != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: CaboCard(
+                child: Row(
                   children: [
-                    const Icon(
-                      Icons.my_location_rounded,
-                      color: CaboColors.red,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Your location',
-                      style: CaboText.label.copyWith(color: Colors.white70),
-                    ),
-                    const Spacer(),
-                    const Pill(
-                      'Live',
-                      color: CaboColors.red,
-                      icon: Icons.circle,
+                    const IconBadge(Icons.directions_car_rounded),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('About this trip', style: CaboText.label),
+                          Text(
+                            '${_short(trip.str('pickup_address'))} → ${_short(trip.str('dropoff_address'))}',
+                            style: CaboText.body.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                          Text(
+                            fmtDayTime(trip.date('completed_at') ?? trip.date('created_at')),
+                            style: CaboText.muted.copyWith(fontSize: 12),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Ozumba Mbadiwe Avenue, near Civic Centre, Victoria Island',
-                  style: CaboText.h3,
-                ),
-                const SizedBox(height: 4),
-                Text('6.4362° N, 3.4300° E', style: CaboText.muted),
-              ],
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          CaboCard(
-            color: Colors.white.withValues(alpha: 0.08),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Shared with',
-                  style: CaboText.label.copyWith(color: Colors.white70),
-                ),
-                const SizedBox(height: 8),
-                for (final t in const [
-                  'Cabo Safety team (24/7)',
-                  'Ngozi Nwosu',
-                  'Chidi Nwosu',
-                ])
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.check_circle,
-                          color: CaboColors.brightGreen,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(t, style: CaboText.body),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          const CaboCard(
-            color: Color(0x14FFFFFF),
-            child: Column(
-              children: [
-                InfoRow('Current trip', 'Eko Hotel → Nike Art Gallery'),
-                InfoRow('Vehicle', 'Silver Toyota Corolla • LND 482 KJ'),
-              ],
-            ),
-          ),
+          CaboField('Details', controller: _details, hint: widget.hint, maxLines: 4, error: _error),
         ],
       ),
     );
@@ -262,63 +303,16 @@ class ReportIncidentScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CaboScaffold(
+    return const _TicketForm(
       title: 'Report an incident',
-      bottom: CaboButton(
-        'Submit report',
-        onPressed: () => go(context, '/support-tickets'),
-      ),
-      children: [
-        Text('What happened?', style: CaboText.h2),
-        const SizedBox(height: 14),
-        const SingleChoice(
-          icons: [
-            Icons.person_off_rounded,
-            Icons.car_crash_rounded,
-            Icons.build_rounded,
-            Icons.more_horiz_rounded,
-          ],
-          options: [
-            ('Rider misconduct', 'Abuse, threats or harassment'),
-            ('Accident', 'A collision during a trip'),
-            ('Vehicle damage', 'Damage caused by a rider'),
-            ('Something else', null),
-          ],
-          initial: 2,
-        ),
-        const SizedBox(height: 6),
-        const CaboField(
-          'Trip',
-          value: 'Today 19:08 • Eko Hotel → Nike Art Gallery',
-          icon: Icons.receipt_long_rounded,
-          suffix: Icon(Icons.expand_more, color: CaboColors.muted),
-        ),
-        const CaboField(
-          'Describe what happened',
-          value: 'Rear seat cover was torn when the rider loaded a large suitcase.',
-          maxLines: 3,
-        ),
-        Text('Photos', style: CaboText.label),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            for (var i = 0; i < 3; i++)
-              Container(
-                width: 84,
-                height: 84,
-                margin: const EdgeInsets.only(right: 10),
-                decoration: BoxDecoration(
-                  color: i == 0 ? CaboColors.surfaceHigh : CaboColors.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: CaboColors.outline),
-                ),
-                child: Icon(
-                  i == 0 ? Icons.image_rounded : Icons.add_a_photo_outlined,
-                  color: i == 0 ? Colors.white54 : CaboColors.yellow,
-                ),
-              ),
-          ],
-        ),
+      heading: 'What happened?',
+      hint: 'Describe what happened, and when',
+      kinds: [
+        ('rider_behaviour', 'Rider misconduct', 'Abuse, threats or harassment'),
+        ('accident', 'Accident', 'A collision during a trip'),
+        ('vehicle_damage', 'Vehicle damage', 'Damage caused by a rider'),
+        ('fare_dispute', 'Fare problem', 'The fare or my earnings look wrong'),
+        ('other', 'Something else', null),
       ],
     );
   }
@@ -329,78 +323,12 @@ class LostItemScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CaboScaffold(
-      title: 'Lost item',
-      bottom: CaboButton('Confirm return', onPressed: () => back(context)),
-      children: [
-        CaboCard(
-          color: CaboColors.yellow.withValues(alpha: 0.14),
-          child: Row(
-            children: [
-              const IconBadge(Icons.phone_iphone_rounded, size: 52),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Black iPhone in a green case', style: CaboText.h3),
-                    Text(
-                      'Probably on the back seat, left side',
-                      style: CaboText.muted,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        const CaboCard(
-          child: Column(
-            children: [
-              InfoRow('Reported by', 'Daniel K.'),
-              InfoRow('Trip', 'Yesterday 21:05 • Yaba → Surulere'),
-              InfoRow('Reported', '40 min ago'),
-            ],
-          ),
-        ),
-        const SectionTitle('Did you find it?'),
-        const ChipPicker(
-          options: ['Yes, I have it', 'Not found'],
-          initial: {0},
-          single: true,
-        ),
-        const SectionTitle('How will you return it?'),
-        const SingleChoice(
-          options: [
-            ('Meet the rider', 'You earn a ₦2,000 return fee'),
-            ('Drop at Cabo Hub Yaba', 'Open daily 08:00 – 20:00'),
-          ],
-        ),
-        Row(
-          children: [
-            Expanded(
-              child: CaboButton(
-                'Call rider',
-                style: CaboButtonStyle.secondary,
-                icon: Icons.call_rounded,
-                height: 48,
-                onPressed: () {},
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: CaboButton(
-                'Message',
-                style: CaboButtonStyle.secondary,
-                icon: Icons.chat_bubble_rounded,
-                height: 48,
-                onPressed: () {},
-              ),
-            ),
-          ],
-        ),
-      ],
+    return const _TicketForm(
+      title: 'Found an item',
+      heading: 'Found something in your car?',
+      intro: 'Tell us what it is and where you found it. Cabo support contacts the rider and arranges the return with you.',
+      hint: 'e.g. Black phone in a green case, on the back seat',
+      kinds: [('lost_item', 'Item found in my vehicle', null)],
     );
   }
 }
@@ -410,17 +338,37 @@ class HelpCentreScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final state = AppScope.read(context);
+    final support = state.config.obj('support');
+    final phone = support?.strOrNull('phone');
+    final email = support?.strOrNull('email');
+    final drivers = state.config.obj('drivers');
+    final faqs = [
+      (
+        'When do I get paid?',
+        'Your earnings balance is paid to your bank account every week. You can also cash out instantly from '
+            '${naira(drivers?.integer('minimum_cashout', 5000) ?? 5000)} for a '
+            '${(drivers?.number('instant_cashout_fee_percent', 1.5) ?? 1.5).toStringAsFixed(1)}% fee.',
+      ),
+      (
+        'How much commission does Cabo take?',
+        'Cabo keeps ${(drivers?.number('commission_rate', 20) ?? 20).round()}% of each fare. Tips are all yours.',
+      ),
+      (
+        'How do cash trips work?',
+        'You keep the cash the rider pays. Cabo\'s commission on those trips is added to your cash balance and '
+            'taken from your earnings at your next payout. Above '
+            '${naira(drivers?.integer('cash_debt_limit', 20000) ?? 20000)} owed you cannot go online until it is settled.',
+      ),
+      (
+        'Why can I not go online?',
+        'Your account, required documents and active vehicle must all be approved, and your documents in date. '
+            'Check your application status to see what is missing.',
+      ),
+    ];
     return CaboScaffold(
       title: 'Help centre',
       children: [
-        TextFormField(
-          style: CaboText.body,
-          decoration: const InputDecoration(
-            hintText: 'Search help articles',
-            prefixIcon: Icon(Icons.search, color: CaboColors.muted),
-          ),
-        ),
-        const SizedBox(height: 16),
         GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -429,39 +377,28 @@ class HelpCentreScreen extends StatelessWidget {
           mainAxisSpacing: 10,
           childAspectRatio: 1.9,
           children: [
-            for (final (icon, label) in const [
-              (Icons.payments_rounded, 'Earnings & payouts'),
-              (Icons.description_rounded, 'Documents'),
-              (Icons.directions_car_rounded, 'Trips & fares'),
-              (Icons.flight_rounded, 'Airport & tours'),
+            for (final (icon, label, route) in const [
+              (Icons.report_rounded, 'Report an incident', '/report-incident'),
+              (Icons.confirmation_number_rounded, 'My support tickets', '/support-tickets'),
+              (Icons.shield_rounded, 'Safety toolkit', '/safety'),
+              (Icons.fact_check_rounded, 'Application status', '/application-status'),
             ])
               CaboCard(
-                onTap: () {},
+                onTap: () => go(context, route),
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Icon(icon, color: CaboColors.yellow),
-                    Text(
-                      label,
-                      style: CaboText.body.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    Text(label, style: CaboText.body.copyWith(fontWeight: FontWeight.w600)),
                   ],
                 ),
               ),
           ],
         ),
         const SectionTitle('Popular questions'),
-        for (final (i, q) in const [
-          'When do I get paid?',
-          'How is the Cabo commission calculated?',
-          'What happens if a rider does not show up?',
-          'How do I renew an expired document?',
-          'How do I become a driver-guide?',
-        ].indexed)
+        for (final (i, (q, a)) in faqs.indexed)
           Theme(
             data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
             child: ExpansionTile(
@@ -469,125 +406,174 @@ class HelpCentreScreen extends StatelessWidget {
               tilePadding: EdgeInsets.zero,
               iconColor: CaboColors.yellow,
               collapsedIconColor: CaboColors.muted,
-              title: Text(
-                q,
-                style: CaboText.body.copyWith(fontWeight: FontWeight.w600),
-              ),
+              title: Text(q, style: CaboText.body.copyWith(fontWeight: FontWeight.w600)),
               children: [
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: Text(
-                    'Earnings from Monday to Sunday are paid every Monday by 10:00 to your bank account. '
-                    'You can also cash out instantly for a 1.5% fee.',
-                    style: CaboText.muted,
-                  ),
+                  child: Text(a, style: CaboText.muted),
                 ),
               ],
             ),
           ),
+        if (phone != null)
+          MenuTile(icon: Icons.call_rounded, title: 'Call support', subtitle: phone, onTap: () => callNumber(context, phone)),
+        if (email != null)
+          MenuTile(
+            icon: Icons.mail_outline_rounded,
+            title: 'Email support',
+            subtitle: email,
+            onTap: () => launchUrl(Uri(scheme: 'mailto', path: email)),
+          ),
         const SizedBox(height: 10),
         CaboButton(
-          'Chat with support',
+          'Message support',
           icon: Icons.support_agent_rounded,
-          onPressed: () => go(context, '/support-chat'),
+          onPressed: () {
+            state.ticket = null;
+            go(context, '/support-chat');
+          },
         ),
       ],
     );
   }
 }
 
-class SupportChatScreen extends StatelessWidget {
+/// A support conversation. Opens the selected ticket, or starts a new one
+/// with the first message.
+class SupportChatScreen extends StatefulWidget {
   const SupportChatScreen({super.key});
 
   @override
+  State<SupportChatScreen> createState() => _SupportChatScreenState();
+}
+
+class _SupportChatScreenState extends State<SupportChatScreen> {
+  final _input = TextEditingController();
+  Json? _ticket;
+  List<Json> _messages = [];
+  bool _loading = false;
+  bool _sending = false;
+  String? _error;
+  bool _started = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    _ticket = AppScope.read(context).ticket;
+    if (_ticket != null) _refresh();
+  }
+
+  @override
+  void dispose() {
+    _input.dispose();
+    super.dispose();
+  }
+
+  Future<void> _refresh() async {
+    final state = AppScope.read(context);
+    setState(() => _loading = _messages.isEmpty);
+    try {
+      final t = unwrap(await state.api.get('/driver/support/tickets/${_ticket!.integer('id')}')) as Json;
+      if (mounted) {
+        setState(() {
+          _ticket = t;
+          _messages = t.list('messages');
+          _error = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = errorText(e));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _send() async {
+    final text = _input.text.trim();
+    if (text.isEmpty || _sending) return;
+    final state = AppScope.read(context);
+    setState(() => _sending = true);
+    try {
+      if (_ticket == null) {
+        final t = unwrap(
+          await state.api.post('/driver/support/tickets', {
+            'category': 'other',
+            'subject': text.length > 60 ? '${text.substring(0, 60)}…' : text,
+            'message': text,
+          }),
+        ) as Json;
+        state.select(ticket: t);
+        _ticket = t;
+      } else {
+        await state.api.post('/driver/support/tickets/${_ticket!.integer('id')}/messages', {'message': text});
+      }
+      _input.clear();
+      await _refresh();
+    } catch (e) {
+      if (mounted) showMessage(context, errorText(e), error: true);
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final t = _ticket;
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leading: Navigator.of(context).canPop()
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-                onPressed: () => back(context),
-              )
+            ? IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 20), onPressed: () => back(context))
             : null,
         titleSpacing: 0,
         centerTitle: false,
         title: Row(
           children: [
-            const Avatar('AD', size: 40, color: CaboColors.brightGreen),
+            const Avatar('CS', size: 40, color: CaboColors.brightGreen),
             const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Ada, Cabo Support', style: CaboText.h3),
-                Text(
-                  'Online • replies in ~2 min',
-                  style: CaboText.muted.copyWith(
-                    fontSize: 12,
-                    color: CaboColors.brightGreen,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Cabo Support', style: CaboText.h3),
+                  Text(
+                    t == null ? 'New conversation' : '${t.str('reference')} • ${humanize(t.str('status'))}',
+                    style: CaboText.muted.copyWith(fontSize: 12, color: CaboColors.brightGreen),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
+        actions: [if (t != null) IconButton(tooltip: 'Refresh', icon: const Icon(Icons.refresh_rounded), onPressed: _refresh)],
       ),
       body: Column(
         children: [
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                Center(child: Text('Today', style: CaboText.label)),
-                const SizedBox(height: 12),
-                const ChatBubble(
-                  'Hi, my payout for last week is ₦4,000 less than the earnings screen showed.',
-                  mine: true,
-                  time: '10:12',
-                ),
-                const ChatBubble(
-                  'Hi Emeka, I am Ada. Thanks for reaching out. Let me check your payout for 28 Sep – 4 Oct.',
-                  mine: false,
-                  time: '10:13',
-                ),
-                const ChatBubble(
-                  'I can see a Lekki toll of ₦4,000 was not added to one shuttle job. '
-                  'I have raised a fare adjustment for you.',
-                  mine: false,
-                  time: '10:16',
-                ),
-                CaboCard(
-                  padding: const EdgeInsets.all(12),
-                  onTap: () => go(context, '/support-tickets'),
-                  child: Row(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                ? ErrorNotice(_error!, onRetry: _refresh)
+                : _messages.isEmpty
+                ? const EmptyNotice(
+                    'Tell us how we can help. Our team replies here and you will get a notification.',
+                    icon: Icons.support_agent_rounded,
+                  )
+                : ListView(
+                    padding: const EdgeInsets.all(16),
                     children: [
-                      const Icon(
-                        Icons.confirmation_number_rounded,
-                        color: CaboColors.yellow,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Ticket #48213 • Fare adjustment ₦4,000',
-                          style: CaboText.body.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const Pill('In review'),
+                      for (final m in _messages)
+                        ChatBubble(m.str('body'), mine: m.str('sender_role') == 'driver', time: fmtTime(m.date('created_at'))),
                     ],
                   ),
-                ),
-                const SizedBox(height: 10),
-                const ChatBubble('Thank you, Ada!', mine: true, time: '10:17'),
-              ],
-            ),
           ),
-          const SafeArea(
+          SafeArea(
             top: false,
             child: Padding(
-              padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: ChatInput(),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: ChatInput(controller: _input, onSend: _send),
             ),
           ),
         ],
@@ -596,78 +582,84 @@ class SupportChatScreen extends StatelessWidget {
   }
 }
 
-class SupportTicketsScreen extends StatelessWidget {
+class SupportTicketsScreen extends StatefulWidget {
   const SupportTicketsScreen({super.key});
 
   @override
+  State<SupportTicketsScreen> createState() => _SupportTicketsScreenState();
+}
+
+class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
+  int _filter = 0;
+
+  @override
   Widget build(BuildContext context) {
-    const tickets = [
-      (
-        '#48213',
-        'Fare adjustment: missing Lekki toll',
-        'Updated 10 min ago',
-        'In review',
-        CaboColors.yellow,
-      ),
-      (
-        '#48190',
-        'Vehicle damage: torn seat cover',
-        'Updated yesterday',
-        'Open',
-        CaboColors.blue,
-      ),
-      (
-        '#47702',
-        'Fare dispute: rider says route was long',
-        'Updated 2 Oct',
-        'Resolved',
-        CaboColors.brightGreen,
-      ),
-      (
-        '#47011',
-        'Payout delayed',
-        'Updated 21 Sep',
-        'Resolved',
-        CaboColors.brightGreen,
-      ),
-    ];
-    return CaboScaffold(
-      title: 'Support tickets',
-      bottom: CaboButton(
-        'New request',
-        icon: Icons.add_rounded,
-        onPressed: () => go(context, '/support-chat'),
-      ),
-      children: [
-        const ChipPicker(
-          options: ['Open (2)', 'Resolved (2)', 'All'],
-          initial: {2},
-          single: true,
-        ),
-        const SizedBox(height: 16),
-        for (final (id, title, updated, status, color) in tickets)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: CaboCard(
-              onTap: () => go(context, '/support-chat'),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+    final state = AppScope.read(context);
+    return Loader<List<Json>>(
+      load: () async => (await state.api.get('/driver/support/tickets') as Json).list('data'),
+      builder: (context, tickets, reload) {
+        bool closed(Json t) => const {'resolved', 'closed'}.contains(t.str('status'));
+        final open = tickets.where((t) => !closed(t)).toList();
+        final resolved = tickets.where(closed).toList();
+        final shown = [tickets, open, resolved][_filter];
+        Future<void> openChat(Json? ticket) async {
+          if (ticket == null) {
+            state.ticket = null;
+          } else {
+            state.select(ticket: ticket);
+          }
+          await Navigator.of(context).pushNamed('/support-chat');
+          await reload();
+        }
+
+        return CaboScaffold(
+          title: 'Support tickets',
+          bottom: CaboButton('New request', icon: Icons.add_rounded, onPressed: () => openChat(null)),
+          children: [
+            ChipPicker(
+              key: ValueKey('${open.length}-${resolved.length}'),
+              options: ['All (${tickets.length})', 'Open (${open.length})', 'Resolved (${resolved.length})'],
+              initial: {_filter},
+              single: true,
+              onChanged: (s) => setState(() => _filter = s.first),
+            ),
+            const SizedBox(height: 14),
+            if (shown.isEmpty) const EmptyNotice('No support tickets here.', icon: Icons.confirmation_number_rounded),
+            for (final t in shown)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: CaboCard(
+                  onTap: () => openChat(t),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(id, style: CaboText.label),
-                      const Spacer(),
-                      Pill(status, color: color),
+                      Row(
+                        children: [
+                          Text(t.str('reference'), style: CaboText.label),
+                          const Spacer(),
+                          Pill(
+                            humanize(t.str('status')),
+                            color: closed(t)
+                                ? CaboColors.brightGreen
+                                : t.str('status') == 'awaiting_user'
+                                ? CaboColors.orange
+                                : CaboColors.yellow,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(t.str('subject_line'), style: CaboText.h3),
+                      Text(
+                        'Updated ${timeAgo(t.date('updated_at'))} • ${plural(t.integer('messages_count'), 'message')}',
+                        style: CaboText.muted.copyWith(fontSize: 12),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  Text(title, style: CaboText.h3),
-                  Text(updated, style: CaboText.muted.copyWith(fontSize: 12)),
-                ],
+                ),
               ),
-            ),
-          ),
-      ],
+          ],
+        );
+      },
     );
   }
 }

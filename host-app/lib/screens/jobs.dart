@@ -2,78 +2,75 @@ import 'package:flutter/material.dart';
 
 import '../widgets/widgets.dart';
 
-// 4. Scheduled jobs (shuttles and tours).
+// 4. Scheduled jobs (airport shuttles and tours).
+
+typedef _Jobs = ({List<Json> assigned, List<Json> open, List<Json> tours});
+
+Future<_Jobs> _loadJobs(AppState state) async {
+  final res = await Future.wait<dynamic>([state.api.get('/driver/jobs/shuttles'), state.api.get('/driver/jobs/tours')]);
+  final shuttles = unwrap(res[0]) as Json;
+  return (assigned: shuttles.list('assigned'), open: shuttles.list('open'), tours: asJsonList(unwrap(res[1])));
+}
+
+bool _isPickup(Json s) => s.str('direction') == 'airport_pickup';
+String _shuttleTitle(Json s) => _isPickup(s) ? 'Airport pickup' : 'Airport drop-off';
+String _shuttleRoute(Json s) {
+  final airport = s.strOrNull('terminal') ?? 'Airport';
+  final other = s.str('address').split(',').first;
+  return _isPickup(s) ? '$airport → $other' : '$other → $airport';
+}
+
+int _guests(Json slot) => slot.list('bookings').fold(0, (sum, b) => sum + b.integer('guests'));
+
+void _openShuttle(BuildContext context, Json s) {
+  AppScope.read(context).select(shuttle: s);
+  go(context, s['driver_id'] == null ? '/job-detail' : '/airport-pickup');
+}
+
+void _openTour(BuildContext context, Json slot) {
+  AppScope.read(context).select(tourSlot: slot);
+  go(context, '/tour-overview');
+}
 
 class _JobCard extends StatelessWidget {
-  const _JobCard({
-    required this.tour,
-    required this.when,
-    required this.route,
-    required this.payout,
-    required this.tags,
-    this.accepted = false,
-  });
-
+  const _JobCard({required this.tour, required this.when, required this.route, required this.payout, required this.tags, this.onTap});
   final bool tour;
   final String when;
   final String route;
-  final String payout;
+  final String? payout;
   final List<String> tags;
-  final bool accepted;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 10),
       child: CaboCard(
-        onTap: () => go(context, tour ? '/tour-overview' : '/job-detail'),
+        onTap: onTap,
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Pill(
-                  tour ? 'Tour' : 'Airport shuttle',
-                  color: tour ? CaboColors.brightGreen : CaboColors.blue,
-                  icon: tour ? Icons.tour_rounded : Icons.flight_land_rounded,
+                IconBadge(tour ? Icons.tour_rounded : Icons.flight_rounded, color: tour ? CaboColors.blue : CaboColors.yellow),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(when, style: CaboText.label),
+                      Text(route, style: CaboText.body.copyWith(fontWeight: FontWeight.w600)),
+                    ],
+                  ),
                 ),
-                const Spacer(),
-                Text(
-                  payout,
-                  style: CaboText.h2.copyWith(color: CaboColors.yellow),
-                ),
+                if (payout != null) Text(payout!, style: CaboText.h3.copyWith(color: CaboColors.yellow)),
               ],
             ),
-            const SizedBox(height: 10),
-            Text(route, style: CaboText.h3),
-            const SizedBox(height: 2),
-            Row(
-              children: [
-                const Icon(
-                  Icons.schedule_rounded,
-                  size: 16,
-                  color: CaboColors.muted,
-                ),
-                const SizedBox(width: 6),
-                Text(when, style: CaboText.muted),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                for (final t in tags) Pill(t, color: CaboColors.muted),
-              ],
-            ),
-            const SizedBox(height: 12),
-            accepted
-                ? const Pill(
-                    'Accepted',
-                    color: CaboColors.brightGreen,
-                    icon: Icons.check,
-                  )
-                : CaboButton('Accept job', height: 44, onPressed: () {}),
+            if (tags.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Wrap(spacing: 8, runSpacing: 6, children: [for (final t in tags) Pill(t, color: CaboColors.muted)]),
+            ],
           ],
         ),
       ),
@@ -81,54 +78,92 @@ class _JobCard extends StatelessWidget {
   }
 }
 
+Widget _shuttleCard(BuildContext context, Json s) => _JobCard(
+  tour: false,
+  when: fmtDayTime(s.date('pickup_at')),
+  route: _shuttleRoute(s),
+  payout: naira(s.integer('driver_payout')),
+  tags: [
+    _shuttleTitle(s),
+    if (s.strOrNull('flight_number') != null) s.str('flight_number'),
+    plural(s.integer('passengers'), 'passenger'),
+    if (s.integer('large_bags') > 0) plural(s.integer('large_bags'), 'large bag'),
+    if (s['driver_id'] != null) humanize(s.str('status')),
+  ],
+  onTap: () => _openShuttle(context, s),
+);
+
+Widget _tourCard(BuildContext context, Json slot) => _JobCard(
+  tour: true,
+  when: fmtDayTime(slot.date('starts_at')),
+  route: slot.obj('tour')?.str('title') ?? 'Tour',
+  payout: null,
+  tags: [
+    plural(_guests(slot), 'guest'),
+    fmtDuration(slot.obj('tour')?.integer('duration_minutes') ?? 0),
+  ],
+  onTap: () => _openTour(context, slot),
+);
+
 class JobsBoardScreen extends StatelessWidget {
   const JobsBoardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final state = AppScope.read(context);
+    final shuttlesOn = state.preferences.strings('jobs').contains('shuttles');
     return CaboScaffold(
       title: 'Jobs',
       showBack: false,
       bottomNav: const DriverNav(1),
       actions: [
-        IconButton(
-          icon: const Icon(
-            Icons.calendar_month_rounded,
-            color: CaboColors.yellow,
-          ),
-          onPressed: () => go(context, '/schedule'),
-        ),
+        IconButton(tooltip: 'My schedule', icon: const Icon(Icons.calendar_month_rounded), onPressed: () => go(context, '/schedule')),
       ],
       children: [
-        const ChipPicker(
-          options: ['All', 'Airport shuttles', 'Tours', 'This weekend'],
-          initial: {0},
-          single: true,
-        ),
-        const SizedBox(height: 16),
-        const _JobCard(
-          tour: false,
-          when: 'Sat 10 Oct • 06:30 pickup',
-          route: 'MMIA Terminal 2 → Ikoyi',
-          payout: '₦25,000',
-          tags: ['Comfort or above', '3 passengers', '4 bags'],
-        ),
-        const _JobCard(
-          tour: true,
-          when: 'Sun 11 Oct • 09:00 – 14:00',
-          route: 'Lagos Island Heritage Walk',
-          payout: '₦45,000',
-          tags: ['Certified guide', 'English', '4 guests'],
-          accepted: true,
-        ),
-        const _JobCard(
-          tour: false,
-          when: 'Mon 12 Oct • 21:15 pickup',
-          route: 'MMIA International → Lekki Phase 1',
-          payout: '₦28,500',
-          tags: ['XL', 'Flight BA75', 'Name board'],
+        Loader<_Jobs>(
+          load: () => _loadJobs(state),
+          builder: (context, jobs, _) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SectionTitle('Your jobs'),
+              if (jobs.assigned.isEmpty && jobs.tours.isEmpty)
+                const EmptyNotice('You have no airport or tour jobs booked.', icon: Icons.event_available_rounded),
+              for (final s in jobs.assigned) _shuttleCard(context, s),
+              for (final t in jobs.tours) _tourCard(context, t),
+              const SectionTitle('Open airport jobs'),
+              if (!shuttlesOn)
+                CaboCard(
+                  onTap: () => go(context, '/ride-preferences'),
+                  child: Row(
+                    children: [
+                      const IconBadge(Icons.flight_takeoff_rounded),
+                      const SizedBox(width: 12),
+                      Expanded(child: Text('Turn on airport shuttles in your ride preferences to see open jobs.', style: CaboText.body)),
+                      const Icon(Icons.chevron_right, color: CaboColors.muted),
+                    ],
+                  ),
+                )
+              else if (jobs.open.isEmpty)
+                const EmptyNotice('No open airport jobs for your vehicle right now.', icon: Icons.flight_rounded),
+              for (final s in jobs.open) _shuttleCard(context, s),
+            ],
+          ),
         ),
       ],
+    );
+  }
+}
+
+class _NoJob extends StatelessWidget {
+  const _NoJob(this.title, this.message);
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: caboAppBar(context, title),
+      body: EmptyNotice(message, icon: Icons.event_busy_rounded, action: 'Open jobs board', onAction: () => replace(context, '/jobs')),
     );
   }
 }
@@ -138,95 +173,116 @@ class JobDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: caboAppBar(context, 'Job details'),
-      body: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          const SizedBox(
-            height: 220,
-            child: CaboMap(
-              route: Routes.airport,
-              labels: false,
-              markers: [
-                MapMarker(Offset(0.2, 0.12), MarkerKind.airport),
-                MapMarker(
-                  Offset(0.62, 0.75),
-                  MarkerKind.dropoff,
-                  label: 'Ikoyi',
+    final state = AppScope.read(context);
+    return Loader<Json?>(
+      load: () async {
+        if (state.shuttle != null) return state.shuttle;
+        final jobs = await _loadJobs(state);
+        return jobs.open.firstOrNull ?? jobs.assigned.firstOrNull;
+      },
+      builder: (context, s, _) {
+        if (s == null) return const _NoJob('Job detail', 'There are no airport jobs to show right now.');
+        final mine = s['driver_id'] != null;
+        return CaboScaffold(
+          title: _shuttleTitle(s),
+          bottom: mine
+              ? CaboButton('Open job', onPressed: () => _openShuttle(context, s))
+              : ActionButton(
+                  'Accept job • ${naira(s.integer('driver_payout'))}',
+                  onPressed: () async {
+                    try {
+                      await state.api.post('/driver/jobs/shuttles/${s.integer('id')}/claim');
+                    } on ApiException catch (e) {
+                      if (e.statusCode != 409) rethrow;
+                      if (context.mounted) {
+                        showMessage(context, e.message, error: true);
+                        replace(context, '/jobs');
+                      }
+                      return;
+                    }
+                    final jobs = await _loadJobs(state);
+                    final claimed = jobs.assigned.where((a) => a.integer('id') == s.integer('id')).firstOrNull;
+                    if (claimed != null) state.select(shuttle: claimed);
+                    if (context.mounted) {
+                      showMessage(context, 'Job accepted. It is in your schedule.');
+                      replace(context, claimed == null ? '/jobs' : '/airport-pickup');
+                    }
+                  },
                 ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Pill(
-                  'Airport shuttle',
-                  color: CaboColors.blue,
-                  icon: Icons.flight_land_rounded,
-                ),
-                const SizedBox(height: 10),
-                Text('MMIA Terminal 2 → Ikoyi', style: CaboText.h1),
-                Text(
-                  'Sat 10 Oct • pickup 06:30 • about 55 min',
-                  style: CaboText.muted,
-                ),
-                const SizedBox(height: 18),
-                GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 0.95,
-                  children: const [
-                    StatTile('Passengers', '3', icon: Icons.people_alt_rounded),
-                    StatTile('Luggage', '4 bags', icon: Icons.luggage_rounded),
-                    StatTile(
-                      'Vehicle',
-                      'Comfort',
-                      icon: Icons.directions_car_rounded,
+          children: [
+            Text(naira(s.integer('driver_payout')), style: CaboText.display.copyWith(color: CaboColors.yellow)),
+            Text('Fixed payout for this job', style: CaboText.muted),
+            const SizedBox(height: 16),
+            CaboCard(
+              child: Column(
+                children: [
+                  InfoRow('Pickup time', fmtDayTime(s.date('pickup_at'))),
+                  InfoRow('Route', _shuttleRoute(s)),
+                  if (s.strOrNull('flight_number') != null)
+                    InfoRow(
+                      'Flight',
+                      [s.str('flight_number'), if (s.date('flight_time') != null) fmtTime(s.date('flight_time'))].join(' • '),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                const CaboCard(
-                  child: Column(
-                    children: [
-                      InfoRow('Flight', 'VS411 from London Heathrow'),
-                      InfoRow('Scheduled arrival', '05:55'),
-                      InfoRow('Drop-off', 'Radisson Blu, Ozumba Mbadiwe'),
-                      InfoRow('Distance', '31 km'),
-                      Divider(height: 20),
-                      InfoRow(
-                        'Payout',
-                        '₦25,000',
-                        bold: true,
-                        valueColor: CaboColors.yellow,
-                      ),
-                    ],
+                  InfoRow('Vehicle', s.obj('ride_type')?.str('name') ?? ''),
+                  InfoRow('Passengers', '${s.integer('passengers')}'),
+                  InfoRow('Large bags', '${s.integer('large_bags')}'),
+                  InfoRow('Reference', s.str('reference')),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _isPickup(s)
+                  ? 'Meet the guest in the arrivals hall with a name board. The price is fixed, so there is no charge for flight delays.'
+                  : 'Collect the guest from their address and take them to the airport in good time for their flight.',
+              style: CaboText.muted,
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ScheduleItem extends StatelessWidget {
+  const _ScheduleItem(this.time, this.title, this.subtitle, this.pay, this.color, this.onTap);
+  final String time;
+  final String title;
+  final String subtitle;
+  final String? pay;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 52, child: Text(time, style: CaboText.label)),
+          Expanded(
+            child: CaboCard(
+              onTap: onTap,
+              padding: const EdgeInsets.all(12),
+              borderColor: color,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title, style: CaboText.body.copyWith(fontWeight: FontWeight.w600)),
+                        Text(subtitle, style: CaboText.muted.copyWith(fontSize: 12)),
+                      ],
+                    ),
                   ),
-                ),
-                const SectionTitle('Notes from rider'),
-                CaboCard(
-                  child: Text(
-                    'Travelling with two children. Please bring a child seat if you have one.',
-                    style: CaboText.body,
-                  ),
-                ),
-              ],
+                  if (pay != null) Text(pay!, style: CaboText.label.copyWith(color: CaboColors.yellow)),
+                ],
+              ),
             ),
           ),
         ],
-      ),
-      bottomNavigationBar: BottomActionBar(
-        child: CaboButton(
-          'Accept job',
-          onPressed: () => go(context, '/schedule'),
-        ),
       ),
     );
   }
@@ -237,156 +293,64 @@ class MyScheduleScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // October 2026 starts on a Thursday.
-    const jobDays = {10, 11, 12, 17, 24};
-    const selected = 10;
-    return CaboScaffold(
-      title: 'My schedule',
-      children: [
-        Row(
+    final state = AppScope.read(context);
+    return Loader<_Jobs>(
+      load: () => _loadJobs(state),
+      builder: (context, jobs, _) {
+        final items = <(DateTime, Widget)>[
+          for (final s in jobs.assigned)
+            (
+              s.date('pickup_at') ?? DateTime.now(),
+              _ScheduleItem(
+                fmtTime(s.date('pickup_at')),
+                _shuttleTitle(s),
+                _shuttleRoute(s),
+                naira(s.integer('driver_payout')),
+                CaboColors.yellow,
+                () => _openShuttle(context, s),
+              ),
+            ),
+          for (final t in jobs.tours)
+            (
+              t.date('starts_at') ?? DateTime.now(),
+              _ScheduleItem(
+                fmtTime(t.date('starts_at')),
+                t.obj('tour')?.str('title') ?? 'Tour',
+                '${plural(_guests(t), 'guest')} • ${t.obj('tour')?.str('meeting_point') ?? ''}',
+                null,
+                CaboColors.blue,
+                () => _openTour(context, t),
+              ),
+            ),
+        ]..sort((a, b) => a.$1.compareTo(b.$1));
+        String? day;
+        return CaboScaffold(
+          title: 'My schedule',
           children: [
-            Text('October 2026', style: CaboText.h2),
-            const Spacer(),
-            const Icon(Icons.chevron_left, color: CaboColors.muted),
-            const SizedBox(width: 12),
-            const Icon(Icons.chevron_right, color: Colors.white),
+            if (items.isEmpty)
+              EmptyNotice(
+                'Nothing scheduled. Accepted airport jobs and your tours appear here.',
+                icon: Icons.calendar_month_rounded,
+                action: 'Open jobs board',
+                onAction: () => replace(context, '/jobs'),
+              ),
+            for (final (at, item) in items) ...[if (fmtDay(at) != day) SectionTitle(day = fmtDay(at)), item],
           ],
-        ),
-        const SizedBox(height: 14),
-        CaboCard(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  for (final d in const ['M', 'T', 'W', 'T', 'F', 'S', 'S'])
-                    Expanded(
-                      child: Center(child: Text(d, style: CaboText.label)),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 7,
-                children: [
-                  for (var i = 0; i < 3; i++) const SizedBox(),
-                  for (var day = 1; day <= 31; day++)
-                    Container(
-                      margin: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(
-                        color: day == selected ? CaboColors.yellow : null,
-                        shape: BoxShape.circle,
-                        border: day == 6
-                            ? Border.all(color: CaboColors.muted)
-                            : null,
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            '$day',
-                            style: CaboText.body.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: day == selected
-                                  ? CaboColors.onYellow
-                                  : Colors.white,
-                            ),
-                          ),
-                          if (jobDays.contains(day))
-                            Icon(
-                              Icons.circle,
-                              size: 5,
-                              color: day == selected
-                                  ? CaboColors.onYellow
-                                  : CaboColors.brightGreen,
-                            ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SectionTitle('Saturday 10 October'),
-        _ScheduleItem(
-          '06:30',
-          'Airport pickup',
-          'MMIA T2 → Ikoyi • VS411',
-          '₦25,000',
-          CaboColors.blue,
-          () => go(context, '/airport-pickup'),
-        ),
-        _ScheduleItem(
-          '15:00',
-          'Airport drop-off',
-          'Lekki → MMIA Domestic',
-          '₦18,000',
-          CaboColors.blue,
-          () => go(context, '/job-detail'),
-        ),
-        const SectionTitle('Sunday 11 October'),
-        _ScheduleItem(
-          '09:00',
-          'Lagos Island Heritage Walk',
-          '4 guests • Tinubu Square',
-          '₦45,000',
-          CaboColors.brightGreen,
-          () => go(context, '/tour-overview'),
-        ),
-      ],
+        );
+      },
     );
   }
 }
 
-class _ScheduleItem extends StatelessWidget {
-  const _ScheduleItem(
-    this.time,
-    this.title,
-    this.subtitle,
-    this.pay,
-    this.color,
-    this.onTap,
-  );
-  final String time;
-  final String title;
-  final String subtitle;
-  final String pay;
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: CaboCard(
-        onTap: onTap,
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Container(width: 4, height: 44, color: color),
-            const SizedBox(width: 12),
-            SizedBox(width: 52, child: Text(time, style: CaboText.h3)),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: CaboText.body.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  Text(subtitle, style: CaboText.muted.copyWith(fontSize: 12)),
-                ],
-              ),
-            ),
-            Text(pay, style: CaboText.label.copyWith(color: CaboColors.yellow)),
-          ],
-        ),
-      ),
-    );
-  }
+/// The host's shuttle job in hand: the selected one, or the next assigned.
+Future<Json?> _myShuttle(AppState state) async {
+  final jobs = await _loadJobs(state);
+  final id = state.shuttle?.integer('id');
+  final s =
+      jobs.assigned.where((a) => a.integer('id') == id).firstOrNull ??
+      (state.shuttle?['driver_id'] == null ? jobs.assigned.firstOrNull : state.shuttle);
+  if (s != null) state.shuttle = s;
+  return s;
 }
 
 class AirportPickupScreen extends StatelessWidget {
@@ -394,154 +358,115 @@ class AirportPickupScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CaboScaffold(
-      title: 'Airport pickup',
-      bottom: Row(
-        children: [
-          Expanded(
-            child: CaboButton(
-              'Name board',
-              style: CaboButtonStyle.secondary,
-              onPressed: () => go(context, '/name-board'),
+    final state = AppScope.read(context);
+    return Loader<Json?>(
+      load: () => _myShuttle(state),
+      builder: (context, s, reload) {
+        if (s == null) return const _NoJob('Airport job', 'You have no airport job in hand.');
+        final status = s.str('status');
+        final rider = s.obj('rider');
+        final phone = rider?.strOrNull('phone');
+        final name = [rider?.strOrNull('first_name'), rider?.strOrNull('last_name')].whereType<String>().join(' ');
+        Future<void> move(String to, String done) async {
+          await state.api.patch('/driver/jobs/shuttles/${s.integer('id')}', {'status': to});
+          state.shuttle = {...s, 'status': to};
+          if (!context.mounted) return;
+          showMessage(context, done);
+          if (to == 'completed') {
+            replace(context, '/jobs');
+          } else {
+            await reload();
+          }
+        }
+
+        return CaboScaffold(
+          title: _shuttleTitle(s),
+          bottom: switch (status) {
+            'driver_assigned' => ActionButton(
+              'Start job',
+              icon: Icons.play_arrow_rounded,
+              onPressed: () => move('in_progress', 'Job started.'),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: CaboButton(
-              'Navigate',
-              icon: Icons.navigation_rounded,
-              onPressed: () => go(context, '/navigate-pickup'),
+            'in_progress' => ActionButton(
+              'Complete job • ${naira(s.integer('driver_payout'))}',
+              style: CaboButtonStyle.green,
+              onPressed: () => move('completed', '${naira(s.integer('driver_payout'))} added to your earnings.'),
             ),
-          ),
-        ],
-      ),
-      children: [
-        CaboCard(
-          color: CaboColors.blue.withValues(alpha: 0.16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+            _ => CaboButton('Back to jobs', style: CaboButtonStyle.secondary, onPressed: () => replace(context, '/jobs')),
+          },
+          children: [
+            Row(
+              children: [
+                Pill(humanize(status), color: status == 'in_progress' ? CaboColors.brightGreen : CaboColors.yellow),
+                const SizedBox(width: 8),
+                if (s.strOrNull('flight_number') != null)
+                  Pill(
+                    '${s.str('flight_number')} • ${humanize(s.str('flight_status'))}',
+                    icon: Icons.flight_rounded,
+                    color: CaboColors.blue,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            CaboCard(
+              child: Row(
                 children: [
-                  Text('VS411', style: CaboText.h2),
-                  const SizedBox(width: 10),
-                  const Pill(
-                    'Landed',
-                    color: CaboColors.brightGreen,
-                    icon: Icons.flight_land,
-                  ),
-                  const Spacer(),
-                  Text(
-                    'Early 8 min',
-                    style: CaboText.label.copyWith(
-                      color: CaboColors.brightGreen,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('LHR', style: CaboText.h1),
-                      Text('London 22:35', style: CaboText.muted),
-                    ],
-                  ),
+                  Avatar(initials(name), size: 50, color: CaboColors.yellowSoft),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Expanded(
-                          child: Divider(color: CaboColors.blue, indent: 10),
-                        ),
-                        Transform.rotate(
-                          angle: 1.5708,
-                          child: const Icon(
-                            Icons.flight,
-                            color: CaboColors.blue,
-                          ),
-                        ),
-                        const Expanded(
-                          child: Divider(color: CaboColors.blue, endIndent: 10),
+                        Text(name.isEmpty ? 'Guest' : name, style: CaboText.h3),
+                        Text(
+                          '${plural(s.integer('passengers'), 'passenger')} • ${plural(s.integer('large_bags') + s.integer('small_bags'), 'bag')}',
+                          style: CaboText.muted,
                         ),
                       ],
                     ),
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text('LOS', style: CaboText.h1),
-                      Text('Lagos 05:47', style: CaboText.muted),
-                    ],
-                  ),
+                  if (phone != null) RoundAction(Icons.call_rounded, onTap: () => callNumber(context, phone)),
                 ],
               ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          childAspectRatio: 1.45,
-          children: const [
-            StatTile('Terminal', 'International', icon: Icons.domain_rounded),
-            StatTile('Baggage belt', 'Belt 4', icon: Icons.luggage_rounded),
+            ),
+            const SizedBox(height: 12),
+            CaboCard(
+              child: Column(
+                children: [
+                  InfoRow('Pickup time', fmtDayTime(s.date('pickup_at'))),
+                  InfoRow('Airport', [s.str('airport'), ?s.strOrNull('terminal')].join(' • ')),
+                  if (s.date('flight_time') != null)
+                    InfoRow(_isPickup(s) ? 'Flight lands' : 'Flight departs', fmtDayTime(s.date('flight_time'))),
+                  InfoRow(_isPickup(s) ? 'Take guest to' : 'Collect guest from', s.str('address')),
+                  if (s.strOrNull('meeting_point') != null) InfoRow('Meeting point', s.str('meeting_point')),
+                  if (s.strOrNull('notes') != null) InfoRow('Notes', s.str('notes')),
+                  InfoRow('Your payout', naira(s.integer('driver_payout')), bold: true, valueColor: CaboColors.yellow),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (_isPickup(s))
+              MenuTile(
+                icon: Icons.badge_rounded,
+                title: 'Show name board',
+                subtitle: 'Hold it up in the arrivals hall',
+                onTap: () => go(context, '/name-board'),
+              ),
+            if (s.numberOrNull('lat') != null)
+              MenuTile(
+                icon: Icons.navigation_rounded,
+                title: 'Navigate to ${s.str('address').split(',').first}',
+                onTap: () => openNavigation(context, s.number('lat'), s.number('lng')),
+              ),
+            MenuTile(
+              icon: Icons.flight_rounded,
+              title: 'Navigate to the airport',
+              // Murtala Muhammed International Airport.
+              onTap: () => openNavigation(context, 6.5774, 3.3212),
+            ),
           ],
-        ),
-        const SectionTitle('Meeting point'),
-        CaboCard(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const IconBadge(Icons.meeting_room_rounded),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Arrivals hall, Exit B', style: CaboText.h3),
-                    Text(
-                      'Stand by the Cabo sign next to the money exchange. '
-                      'Park in the short-stay car park, row C.',
-                      style: CaboText.muted,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SectionTitle('Rider'),
-        CaboCard(
-          child: Row(
-            children: [
-              const Avatar('AO', color: CaboColors.yellowSoft),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Amara Okafor + 2', style: CaboText.h3),
-                    Text('4 bags • going to Ikoyi', style: CaboText.muted),
-                  ],
-                ),
-              ),
-              RoundAction(Icons.call_rounded, size: 44, onTap: () {}),
-              const SizedBox(width: 8),
-              RoundAction(
-                Icons.chat_bubble_rounded,
-                size: 44,
-                onTap: () => go(context, '/chat-rider'),
-              ),
-            ],
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 }
@@ -551,223 +476,226 @@ class NameBoardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              Align(
-                alignment: Alignment.topRight,
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.close_rounded,
-                    color: CaboColors.onYellow,
-                    size: 32,
-                  ),
-                  onPressed: () => back(context),
-                ),
-              ),
-              const Spacer(),
-              const CaboLogo(size: 60, color: CaboColors.deepGreen),
-              const SizedBox(height: 40),
-              Text(
-                'WELCOME TO LAGOS',
-                style: CaboText.h3.copyWith(
-                  color: CaboColors.green,
-                  letterSpacing: 3,
-                ),
-              ),
-              const SizedBox(height: 12),
-              FittedBox(
-                child: Text(
-                  'AMARA\nOKAFOR',
-                  textAlign: TextAlign.center,
-                  style: CaboText.display.copyWith(
-                    fontSize: 72,
-                    color: CaboColors.onYellow,
-                    height: 1.05,
+    final state = AppScope.read(context);
+    return Loader<Json?>(
+      load: () => _myShuttle(state),
+      builder: (context, s, _) {
+        final rider = s?.obj('rider');
+        final name =
+            s?.strOrNull('name_board') ?? [rider?.strOrNull('first_name'), rider?.strOrNull('last_name')].whereType<String>().join(' ');
+        return Scaffold(
+          backgroundColor: Colors.white,
+          body: SafeArea(
+            child: Stack(
+              children: [
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CaboLogo(size: 44, hostLabel: false),
+                        const SizedBox(height: 28),
+                        FittedBox(
+                          child: Text(
+                            name.isEmpty ? 'Cabo guest' : name.toUpperCase(),
+                            textAlign: TextAlign.center,
+                            style: CaboText.display.copyWith(color: CaboColors.onYellow, fontSize: 64),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        if (s?.strOrNull('flight_number') != null)
+                          Text('Flight ${s!.str('flight_number')}', style: CaboText.h2.copyWith(color: CaboColors.green)),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 10,
+                Align(
+                  alignment: Alignment.topLeft,
+                  child: IconButton(
+                    tooltip: 'Close',
+                    icon: const Icon(Icons.close_rounded, color: CaboColors.onYellow),
+                    onPressed: () => back(context),
+                  ),
                 ),
-                decoration: BoxDecoration(
-                  color: CaboColors.yellow,
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Text(
-                  'Your Cabo driver: Emeka',
-                  style: CaboText.h3.copyWith(color: CaboColors.onYellow),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Turn your screen to full brightness',
-                style: CaboText.muted.copyWith(color: Colors.black45),
-              ),
-            ],
+              ],
+            ),
           ),
+        );
+      },
+    );
+  }
+}
+
+/// The tour slot in hand, refreshed: the selected one, or the next upcoming.
+Future<Json?> _mySlot(AppState state) async {
+  final tours = (await _loadJobs(state)).tours;
+  final id = state.tourSlot?.integer('id');
+  final slot = tours.where((t) => t.integer('id') == id).firstOrNull ?? tours.firstOrNull;
+  if (slot != null) state.tourSlot = slot;
+  return slot;
+}
+
+class _GuestRow extends StatelessWidget {
+  const _GuestRow(this.booking, {this.onCheckIn});
+  final Json booking;
+  final Future<void> Function()? onCheckIn;
+
+  @override
+  Widget build(BuildContext context) {
+    final b = booking;
+    final rider = b.obj('rider');
+    final name = [rider?.strOrNull('first_name'), rider?.strOrNull('last_name')].whereType<String>().join(' ');
+    final status = b.str('status');
+    final phone = rider?.strOrNull('phone');
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: CaboCard(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Avatar(initials(name), size: 42, color: CaboColors.yellowSoft),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(name.isEmpty ? 'Guest' : name, style: CaboText.body.copyWith(fontWeight: FontWeight.w600)),
+                  Text('${plural(b.integer('guests'), 'guest')} • ${b.str('reference')}', style: CaboText.muted.copyWith(fontSize: 12)),
+                ],
+              ),
+            ),
+            if (phone != null)
+              IconButton(
+                tooltip: 'Call $name',
+                icon: const Icon(Icons.call_rounded, color: CaboColors.muted),
+                onPressed: () => callNumber(context, phone),
+              ),
+            if (status == 'confirmed' && onCheckIn != null)
+              ActionButton('Check in', height: 38, expand: false, onPressed: onCheckIn!)
+            else
+              Pill(
+                status == 'confirmed' ? 'Not arrived' : humanize(status),
+                color: status == 'confirmed' ? CaboColors.muted : CaboColors.brightGreen,
+                icon: status == 'confirmed' ? null : Icons.check,
+              ),
+          ],
         ),
       ),
     );
   }
 }
 
-const _guests = [
-  ('Amara Okafor', 'United Kingdom', 'AO', true),
-  ('Tom Okafor', 'United Kingdom', 'TO', true),
-  ('Daniel Kamau', 'Kenya', 'DK', false),
-  ('Léa Martin', 'France', 'LM', false),
-];
-
 class TourOverviewScreen extends StatelessWidget {
   const TourOverviewScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          SizedBox(
-            height: 230,
-            child: Stack(
-              fit: StackFit.expand,
+    final state = AppScope.read(context);
+    return Loader<Json?>(
+      load: () => _mySlot(state),
+      builder: (context, slot, _) {
+        if (slot == null) return const _NoJob('Tour job', 'You have no tours to guide right now.');
+        final tour = slot.obj('tour');
+        final bookings = slot.list('bookings');
+        return CaboScaffold(
+          title: 'Tour job',
+          bottom: CaboButton('Check in guests', icon: Icons.how_to_reg_rounded, onPressed: () => go(context, '/guest-check-in')),
+          children: [
+            Text(tour?.str('title') ?? 'Tour', style: CaboText.h1),
+            const SizedBox(height: 4),
+            Text(fmtDayTime(slot.date('starts_at')), style: CaboText.h3.copyWith(color: CaboColors.yellow)),
+            const SizedBox(height: 14),
+            Row(
               children: [
-                DecoratedBox(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Color(0xFFF2A65A), Color(0xFF1C5A3A)],
-                    ),
-                  ),
-                  child: CustomPaint(
-                    painter: SkylinePainter(
-                      buildingColor: const Color(0xFF0C3B27),
-                      water: true,
-                    ),
-                  ),
-                ),
-                SafeArea(
-                  child: Align(
-                    alignment: Alignment.topLeft,
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-                      onPressed: () => back(context),
-                    ),
-                  ),
-                ),
+                Expanded(child: StatTile('Guests', '${_guests(slot)}', icon: Icons.groups_rounded)),
+                const SizedBox(width: 10),
+                Expanded(child: StatTile('Capacity', '${slot.integer('capacity')}', icon: Icons.event_seat_rounded)),
+                const SizedBox(width: 10),
+                Expanded(child: StatTile('Length', fmtDuration(tour?.integer('duration_minutes') ?? 0), icon: Icons.schedule_rounded)),
               ],
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Pill(
-                  'Tour • by Eko Heritage Tours',
-                  color: CaboColors.brightGreen,
-                  icon: Icons.tour_rounded,
-                ),
-                const SizedBox(height: 10),
-                Text('Lagos Island Heritage Walk', style: CaboText.h1),
-                Text(
-                  'Sun 11 Oct • 09:00 – 14:00 • ₦45,000',
-                  style: CaboText.muted,
-                ),
-                const SizedBox(height: 14),
-                CaboCard(
-                  child: Row(
-                    children: [
-                      const IconBadge(Icons.place_rounded),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Meeting point', style: CaboText.label),
-                            Text(
-                              'Federal Palace Hotel lobby, V.I.',
-                              style: CaboText.body.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SectionTitle('Guests (${_guests.length})'),
-                for (final (name, country, initials, _) in _guests)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        Avatar(
-                          initials,
-                          size: 40,
-                          color: CaboColors.yellowSoft,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(child: Text(name, style: CaboText.body)),
-                        Text(country, style: CaboText.muted),
-                      ],
-                    ),
-                  ),
-                const SectionTitle('Itinerary'),
-                for (final (time, stop) in const [
-                  ('09:00', 'Pickup at Federal Palace Hotel'),
-                  ('09:30', 'Tinubu Square and Old Secretariat'),
-                  ('10:30', 'Brazilian Quarter, Popo Aguda'),
-                  ('11:45', 'Nike Art Gallery'),
-                  ('13:30', 'Lunch at Terra Kulture'),
-                ])
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 54,
-                          child: Text(time, style: CaboText.label),
-                        ),
-                        const Icon(
-                          Icons.circle,
-                          size: 10,
-                          color: CaboColors.yellow,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(child: Text(stop, style: CaboText.body)),
-                      ],
-                    ),
-                  ),
-                const SectionTitle('Guest notes'),
-                CaboCard(
-                  child: Text(
-                    'Léa is vegetarian. Daniel would like extra time for photos at the Brazilian Quarter.',
-                    style: CaboText.body,
-                  ),
-                ),
-              ],
+            const SizedBox(height: 12),
+            MenuTile(icon: Icons.place_rounded, title: 'Meeting point', subtitle: tour?.str('meeting_point') ?? 'See the tour details'),
+            const SectionTitle('Guest list'),
+            if (bookings.isEmpty) const EmptyNotice('No guests have booked this tour yet.', icon: Icons.groups_rounded),
+            for (final b in bookings) _GuestRow(b),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class GuestCheckInScreen extends StatefulWidget {
+  const GuestCheckInScreen({super.key});
+
+  @override
+  State<GuestCheckInScreen> createState() => _GuestCheckInScreenState();
+}
+
+class _GuestCheckInScreenState extends State<GuestCheckInScreen> {
+  final _code = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _code.dispose();
+    super.dispose();
+  }
+
+  /// Checks a ticket in by its code. Accepts the code as printed in the guest's QR ("cabo:ticket:…").
+  Future<void> _checkIn(String token, Future<void> Function() reload) async {
+    final state = AppScope.read(context);
+    try {
+      final res =
+          unwrap(await state.api.post('/driver/jobs/tours/check-in', {'qr_token': token.trim().replaceFirst('cabo:ticket:', '')})) as Json;
+      _code.clear();
+      if (mounted) {
+        setState(() => _error = null);
+        showMessage(context, '${res.obj('rider')?.str('first_name') ?? 'Guest'} checked in (${plural(res.integer('guests'), 'guest')}).');
+      }
+      await reload();
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.fields['qr_token'] ?? e.message);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = AppScope.read(context);
+    return Loader<Json?>(
+      load: () => _mySlot(state),
+      builder: (context, slot, reload) {
+        if (slot == null) return const _NoJob('Guest check-in', 'You have no tours to guide right now.');
+        final bookings = slot.list('bookings');
+        final arrived = bookings.where((b) => b.str('status') != 'confirmed').length;
+        return CaboScaffold(
+          title: 'Guest check-in',
+          bottom: CaboButton('Start tour', onPressed: () => replace(context, '/tour-in-progress')),
+          children: [
+            Text(slot.obj('tour')?.str('title') ?? 'Tour', style: CaboText.h2),
+            Text('$arrived of ${bookings.length} bookings checked in', style: CaboText.muted),
+            const SizedBox(height: 14),
+            for (final b in bookings) _GuestRow(b, onCheckIn: () => _checkIn(b.str('qr_token'), reload)),
+            const SectionTitle('Enter a ticket code'),
+            Text('Type the code shown under the QR on the guest\'s ticket.', style: CaboText.muted),
+            const SizedBox(height: 8),
+            CaboField('Ticket code', controller: _code, icon: Icons.qr_code_2_rounded, error: _error),
+            ActionButton(
+              'Check in ticket',
+              style: CaboButtonStyle.secondary,
+              onPressed: () async {
+                if (_code.text.trim().isEmpty) {
+                  setState(() => _error = 'Enter the ticket code.');
+                  return;
+                }
+                await _checkIn(_code.text, reload);
+              },
             ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: BottomActionBar(
-        child: CaboButton(
-          'Check in guests',
-          icon: Icons.qr_code_scanner_rounded,
-          onPressed: () => go(context, '/guest-check-in'),
-        ),
-      ),
+          ],
+        );
+      },
     );
   }
 }
@@ -777,266 +705,58 @@ class TourInProgressScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const stops = [
-      ('Tinubu Square', '30 min', 2),
-      ('Brazilian Quarter', '45 min', 2),
-      ('Nike Art Gallery', '60 min • 22 min left', 1),
-      ('Terra Kulture (lunch)', '75 min', 0),
-    ];
-    return Scaffold(
-      appBar: caboAppBar(context, 'Tour in progress'),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-        children: [
-          CaboCard(
-            color: CaboColors.yellow,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'NOW AT',
-                  style: CaboText.label.copyWith(color: CaboColors.onYellow),
-                ),
-                Text(
-                  'Nike Art Gallery',
-                  style: CaboText.h1.copyWith(color: CaboColors.onYellow),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.timer_rounded,
-                      color: CaboColors.onYellow,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '22 min left at this stop',
-                      style: CaboText.body.copyWith(
-                        color: CaboColors.onYellow,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: const LinearProgressIndicator(
-                    value: 0.63,
-                    minHeight: 8,
-                    color: CaboColors.deepGreen,
-                    backgroundColor: Color(0x33062B1A),
-                  ),
-                ),
-              ],
+    final state = AppScope.read(context);
+    return Loader<Json?>(
+      load: () => _mySlot(state),
+      builder: (context, slot, reload) {
+        if (slot == null) return const _NoJob('Tour in progress', 'You have no tours to guide right now.');
+        final tour = slot.obj('tour');
+        final bookings = slot.list('bookings');
+        final onTour = bookings.where((b) => b.str('status') == 'checked_in').fold(0, (sum, b) => sum + b.integer('guests'));
+        return CaboScaffold(
+          title: 'Tour in progress',
+          bottom: ActionButton(
+            'Complete tour',
+            style: CaboButtonStyle.green,
+            onPressed: () async {
+              final done = unwrap(await state.api.post('/driver/jobs/tours/${slot.integer('id')}/complete')) as Json;
+              state.tourSlot = {...slot, 'bookings': done.list('bookings')};
+              if (context.mounted) replace(context, '/tour-completed');
+            },
+          ),
+          children: [
+            Text(tour?.str('title') ?? 'Tour', style: CaboText.h1),
+            Text(
+              'Started ${fmtTime(slot.date('starts_at'))} • ${fmtDuration(tour?.integer('duration_minutes') ?? 0)}',
+              style: CaboText.muted,
             ),
-          ),
-          const SizedBox(height: 14),
-          CaboCard(
-            child: Row(
-              children: [
-                const IconBadge(
-                  Icons.restaurant_rounded,
-                  color: CaboColors.brightGreen,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('NEXT STOP', style: CaboText.label),
-                      Text(
-                        'Terra Kulture, V.I.',
-                        style: CaboText.body.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text('6.4 km • 18 min drive', style: CaboText.muted),
-                    ],
-                  ),
-                ),
-                RoundAction(
-                  Icons.navigation_rounded,
-                  color: CaboColors.brightGreen,
-                  iconColor: CaboColors.onYellow,
-                  onTap: () => go(context, '/trip-in-progress'),
-                ),
-              ],
-            ),
-          ),
-          const SectionTitle('Itinerary', action: '4 guests on board'),
-          for (final (i, (name, time, state)) in stops.indexed)
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Column(
-                  children: [
-                    Icon(
-                      state == 2
-                          ? Icons.check_circle
-                          : state == 1
-                          ? Icons.radio_button_checked
-                          : Icons.radio_button_unchecked,
-                      color: state == 2
-                          ? CaboColors.brightGreen
-                          : state == 1
-                          ? CaboColors.yellow
-                          : CaboColors.muted,
-                    ),
-                    if (i < stops.length - 1)
-                      Container(
-                        width: 2,
-                        height: 36,
-                        color: CaboColors.outline,
-                      ),
-                  ],
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: CaboText.body.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: state == 0 ? CaboColors.muted : Colors.white,
-                        ),
-                      ),
-                      Text(time, style: CaboText.muted.copyWith(fontSize: 12)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-        ],
-      ),
-      bottomNavigationBar: BottomActionBar(
-        child: CaboButton(
-          'Finish tour',
-          style: CaboButtonStyle.green,
-          onPressed: () => replace(context, '/tour-completed'),
-        ),
-      ),
-    );
-  }
-}
-
-class GuestCheckInScreen extends StatelessWidget {
-  const GuestCheckInScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return CaboScaffold(
-      title: 'Guest check-in',
-      bottom: CaboButton(
-        'Start tour (2 of 4 checked in)',
-        onPressed: () => go(context, '/tour-in-progress'),
-      ),
-      children: [
-        Container(
-          height: 260,
-          decoration: BoxDecoration(
-            color: Colors.black,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              const Icon(
-                Icons.qr_code_2_rounded,
-                size: 120,
-                color: Colors.white24,
-              ),
-              SizedBox(
-                width: 180,
-                height: 180,
-                child: CustomPaint(painter: _ViewfinderPainter()),
-              ),
-              Positioned(
-                bottom: 14,
-                child: Text(
-                  'Point at the guest\'s QR ticket',
-                  style: CaboText.label.copyWith(color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SectionTitle('Guests', action: 'Mark manually'),
-        for (final (name, country, initials, checked) in _guests)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: CaboCard(
-              padding: const EdgeInsets.all(12),
+            const SizedBox(height: 14),
+            CaboCard(
+              color: CaboColors.brightGreen.withValues(alpha: 0.12),
               child: Row(
                 children: [
-                  Avatar(initials, size: 40, color: CaboColors.yellowSoft),
+                  const Icon(Icons.groups_rounded, color: CaboColors.brightGreen),
                   const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name,
-                          style: CaboText.body.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          country,
-                          style: CaboText.muted.copyWith(fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                  checked
-                      ? const Pill(
-                          'Checked in',
-                          color: CaboColors.brightGreen,
-                          icon: Icons.check,
-                        )
-                      : const Pill('Waiting', color: CaboColors.muted),
+                  Expanded(child: Text('${plural(onTour, 'guest')} on tour with you', style: CaboText.h3)),
+                  TextButton(onPressed: () => go(context, '/guest-check-in'), child: const Text('Check in more')),
                 ],
               ),
             ),
-          ),
-      ],
+            const SectionTitle('Guests'),
+            for (final b in bookings) _GuestRow(b),
+            const SizedBox(height: 4),
+            MenuTile(
+              icon: Icons.shield_rounded,
+              title: 'Safety toolkit',
+              subtitle: 'Emergency help and incident reports',
+              color: CaboColors.blue,
+              onTap: () => go(context, '/safety'),
+            ),
+          ],
+        );
+      },
     );
   }
-}
-
-class _ViewfinderPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = Paint()
-      ..color = CaboColors.yellow
-      ..strokeWidth = 5
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    const l = 34.0;
-    final w = size.width, h = size.height;
-    for (final (x, y, dx, dy) in [
-      (0.0, 0.0, 1.0, 1.0),
-      (w, 0.0, -1.0, 1.0),
-      (0.0, h, 1.0, -1.0),
-      (w, h, -1.0, -1.0),
-    ]) {
-      canvas.drawLine(Offset(x, y), Offset(x + l * dx, y), p);
-      canvas.drawLine(Offset(x, y), Offset(x, y + l * dy), p);
-    }
-    canvas.drawLine(
-      Offset(10, h / 2),
-      Offset(w - 10, h / 2),
-      p
-        ..color = CaboColors.red
-        ..strokeWidth = 2,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class TourCompletedScreen extends StatelessWidget {
@@ -1044,82 +764,40 @@ class TourCompletedScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final slot = AppScope.read(context).tourSlot;
+    final bookings = slot?.list('bookings') ?? const <Json>[];
+    final completed = bookings.where((b) => b.str('status') == 'completed').toList();
+    final missed = bookings.where((b) => b.str('status') == 'confirmed').length;
     return CaboScaffold(
       title: 'Tour completed',
       showBack: false,
-      bottom: CaboButton(
-        'Back to jobs',
-        onPressed: () => replace(context, '/jobs'),
-      ),
+      bottom: CaboButton('Back to jobs', onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/jobs', (_) => false)),
       children: [
-        const SizedBox(height: 8),
-        const Center(
-          child: HeroIllustration(Icons.emoji_events_rounded, size: 150),
-        ),
-        const SizedBox(height: 10),
-        Center(child: Text('Great tour, Emeka!', style: CaboText.h1)),
-        Center(
-          child: Text('Lagos Island Heritage Walk', style: CaboText.muted),
-        ),
-        const SizedBox(height: 18),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 3,
-          crossAxisSpacing: 10,
-          childAspectRatio: 1.0,
-          children: const [
-            StatTile('Duration', '5h 05m'),
-            StatTile('Stops', '5 of 5'),
-            StatTile('Guests', '4'),
-          ],
-        ),
         const SizedBox(height: 12),
-        const CaboCard(
+        const Center(
+          child: CircleAvatar(
+            radius: 40,
+            backgroundColor: CaboColors.brightGreen,
+            child: Icon(Icons.check_rounded, size: 48, color: CaboColors.onYellow),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Center(
+          child: Text(slot?.obj('tour')?.str('title') ?? 'Tour', style: CaboText.h2, textAlign: TextAlign.center),
+        ),
+        Center(child: Text('Well done. Your guests can now leave a review.', style: CaboText.muted)),
+        const SizedBox(height: 20),
+        CaboCard(
           child: Column(
             children: [
-              InfoRow('Tour payout', '₦45,000'),
-              InfoRow('Tips', '+ ₦12,000', valueColor: CaboColors.brightGreen),
-              Divider(height: 20),
-              InfoRow(
-                'Total',
-                '₦57,000',
-                bold: true,
-                valueColor: CaboColors.yellow,
-              ),
+              InfoRow('Guests who took the tour', '${completed.fold(0, (sum, b) => sum + b.integer('guests'))}'),
+              InfoRow('Bookings completed', '${completed.length}'),
+              if (missed > 0) InfoRow('Did not arrive', plural(missed, 'booking')),
             ],
           ),
         ),
-        const SectionTitle('Guest ratings'),
-        for (final (name, rating, comment) in const [
-          ('Amara', 5.0, 'Emeka made the history come alive!'),
-          ('Daniel', 5.0, 'Knowledgeable and very patient.'),
-          ('Léa', 4.0, 'Lovely day, a bit rushed at lunch.'),
-        ])
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: CaboCard(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        name,
-                        style: CaboText.body.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const Spacer(),
-                      Stars(rating, size: 16),
-                    ],
-                  ),
-                  Text('"$comment"', style: CaboText.muted),
-                ],
-              ),
-            ),
-          ),
+        const SizedBox(height: 12),
+        Text('Your pay for guiding is arranged with the tour partner and is not shown in this app yet.', style: CaboText.muted),
       ],
     );
   }

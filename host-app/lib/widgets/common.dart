@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
+import 'live.dart';
 
-void go(BuildContext context, String route) =>
-    Navigator.of(context).pushNamed(route);
+void go(BuildContext context, String route) => Navigator.of(context).pushNamed(route);
 
-void replace(BuildContext context, String route) =>
-    Navigator.of(context).pushReplacementNamed(route);
+void replace(BuildContext context, String route) => Navigator.of(context).pushReplacementNamed(route);
 
 void back(BuildContext context) => Navigator.of(context).maybePop();
 
@@ -35,11 +34,7 @@ class CaboButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final (bg, fg, border) = switch (style) {
       CaboButtonStyle.primary => (CaboColors.yellow, CaboColors.onYellow, null),
-      CaboButtonStyle.secondary => (
-        Colors.transparent,
-        CaboColors.text,
-        CaboColors.muted,
-      ),
+      CaboButtonStyle.secondary => (Colors.transparent, CaboColors.text, CaboColors.muted),
       CaboButtonStyle.green => (CaboColors.green, CaboColors.text, null),
       CaboButtonStyle.danger => (CaboColors.red, Colors.white, null),
       CaboButtonStyle.light => (Colors.white, CaboColors.onYellow, null),
@@ -49,19 +44,12 @@ class CaboButton extends StatelessWidget {
       mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        if (icon != null) ...[
-          Icon(icon, size: 22, color: fg),
-          const SizedBox(width: 10),
-        ],
+        if (icon != null) ...[Icon(icon, size: 22, color: fg), const SizedBox(width: 10)],
         Flexible(
           child: Text(
             label,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: height >= 56 ? 17 : 15,
-              fontWeight: FontWeight.w700,
-              color: fg,
-            ),
+            style: TextStyle(fontSize: height >= 56 ? 17 : 15, fontWeight: FontWeight.w700, color: fg),
           ),
         ),
       ],
@@ -70,11 +58,7 @@ class CaboButton extends StatelessWidget {
       opacity: disabled ? 0.45 : 1,
       child: Material(
         color: bg,
-        shape: StadiumBorder(
-          side: border == null
-              ? BorderSide.none
-              : BorderSide(color: border, width: 1.5),
-        ),
+        shape: StadiumBorder(side: border == null ? BorderSide.none : BorderSide(color: border, width: 1.5)),
         child: InkWell(
           customBorder: const StadiumBorder(),
           onTap: onPressed,
@@ -90,21 +74,11 @@ class CaboButton extends StatelessWidget {
   }
 }
 
-PreferredSizeWidget caboAppBar(
-  BuildContext context,
-  String title, {
-  List<Widget>? actions,
-  bool showBack = true,
-}) {
+PreferredSizeWidget caboAppBar(BuildContext context, String title, {List<Widget>? actions, bool showBack = true}) {
   final canPop = Navigator.of(context).canPop();
   return AppBar(
     automaticallyImplyLeading: false,
-    leading: showBack && canPop
-        ? IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-            onPressed: () => back(context),
-          )
-        : null,
+    leading: showBack && canPop ? IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 20), onPressed: () => back(context)) : null,
     title: Text(title),
     actions: actions,
   );
@@ -136,9 +110,7 @@ class CaboScaffold extends StatelessWidget {
     return Scaffold(
       appBar: caboAppBar(context, title, actions: actions, showBack: showBack),
       body: ListView(padding: padding, children: children),
-      bottomNavigationBar:
-          bottomNav ??
-          (bottom == null ? null : BottomActionBar(child: bottom!)),
+      bottomNavigationBar: bottomNav ?? (bottom == null ? null : BottomActionBar(child: bottom!)),
     );
   }
 }
@@ -156,10 +128,7 @@ class BottomActionBar extends StatelessWidget {
       ),
       child: SafeArea(
         top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
-          child: child,
-        ),
+        child: Padding(padding: const EdgeInsets.fromLTRB(20, 14, 20, 14), child: child),
       ),
     );
   }
@@ -189,9 +158,7 @@ class CaboCard extends StatelessWidget {
       color: color,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(radius),
-        side: borderColor == null
-            ? BorderSide.none
-            : BorderSide(color: borderColor!, width: 1.5),
+        side: borderColor == null ? BorderSide.none : BorderSide(color: borderColor!, width: 1.5),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -218,10 +185,7 @@ class SectionTitle extends StatelessWidget {
           if (action != null)
             GestureDetector(
               onTap: onAction,
-              child: Text(
-                action!,
-                style: CaboText.label.copyWith(color: CaboColors.yellow),
-              ),
+              child: Text(action!, style: CaboText.label.copyWith(color: CaboColors.yellow)),
             ),
         ],
       ),
@@ -230,13 +194,7 @@ class SectionTitle extends StatelessWidget {
 }
 
 class Pill extends StatelessWidget {
-  const Pill(
-    this.text, {
-    super.key,
-    this.color = CaboColors.yellow,
-    this.icon,
-    this.solid = false,
-  });
+  const Pill(this.text, {super.key, this.color = CaboColors.yellow, this.icon, this.solid = false});
   final String text;
   final Color color;
   final IconData? icon;
@@ -247,24 +205,14 @@ class Pill extends StatelessWidget {
     final fg = solid ? CaboColors.onYellow : color;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: solid ? color : color.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(30),
-      ),
+      decoration: BoxDecoration(color: solid ? color : color.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(30)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (icon != null) ...[
-            Icon(icon, size: 14, color: fg),
-            const SizedBox(width: 4),
-          ],
+          if (icon != null) ...[Icon(icon, size: 14, color: fg), const SizedBox(width: 4)],
           Text(
             text,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: fg,
-            ),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: fg),
           ),
         ],
       ),
@@ -273,12 +221,7 @@ class Pill extends StatelessWidget {
 }
 
 class IconBadge extends StatelessWidget {
-  const IconBadge(
-    this.icon, {
-    super.key,
-    this.color = CaboColors.yellow,
-    this.size = 44,
-  });
+  const IconBadge(this.icon, {super.key, this.color = CaboColors.yellow, this.size = 44});
   final IconData icon;
   final Color color;
   final double size;
@@ -288,22 +231,14 @@ class IconBadge extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(size * 0.32),
-      ),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(size * 0.32)),
       child: Icon(icon, color: color, size: size * 0.52),
     );
   }
 }
 
 class Avatar extends StatelessWidget {
-  const Avatar(
-    this.initials, {
-    super.key,
-    this.size = 48,
-    this.color = CaboColors.yellow,
-  });
+  const Avatar(this.initials, {super.key, this.size = 48, this.color = CaboColors.yellow});
   final String initials;
   final double size;
   final Color color;
@@ -321,11 +256,7 @@ class Avatar extends StatelessWidget {
       ),
       child: Text(
         initials,
-        style: TextStyle(
-          fontSize: size * 0.36,
-          fontWeight: FontWeight.w700,
-          color: CaboColors.onYellow,
-        ),
+        style: TextStyle(fontSize: size * 0.36, fontWeight: FontWeight.w700, color: CaboColors.onYellow),
       ),
     );
   }
@@ -364,18 +295,12 @@ class MenuTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: CaboText.body.copyWith(fontWeight: FontWeight.w600),
-                  ),
+                  Text(title, style: CaboText.body.copyWith(fontWeight: FontWeight.w600)),
                   if (subtitle != null) Text(subtitle!, style: CaboText.muted),
                 ],
               ),
             ),
-            trailing ??
-                (onTap != null
-                    ? const Icon(Icons.chevron_right, color: CaboColors.muted)
-                    : const SizedBox.shrink()),
+            trailing ?? (onTap != null ? const Icon(Icons.chevron_right, color: CaboColors.muted) : const SizedBox.shrink()),
           ],
         ),
       ),
@@ -384,13 +309,7 @@ class MenuTile extends StatelessWidget {
 }
 
 class InfoRow extends StatelessWidget {
-  const InfoRow(
-    this.label,
-    this.value, {
-    super.key,
-    this.valueColor,
-    this.bold = false,
-  });
+  const InfoRow(this.label, this.value, {super.key, this.valueColor, this.bold = false});
   final String label;
   final String value;
   final Color? valueColor;
@@ -403,9 +322,7 @@ class InfoRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Text(label, style: CaboText.muted.copyWith(fontSize: 14)),
-          ),
+          Expanded(child: Text(label, style: CaboText.muted.copyWith(fontSize: 14))),
           const SizedBox(width: 12),
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 200),
@@ -426,14 +343,7 @@ class InfoRow extends StatelessWidget {
 }
 
 class StatTile extends StatelessWidget {
-  const StatTile(
-    this.label,
-    this.value, {
-    super.key,
-    this.icon,
-    this.color = CaboColors.yellow,
-    this.caption,
-  });
+  const StatTile(this.label, this.value, {super.key, this.icon, this.color = CaboColors.yellow, this.caption});
   final String label;
   final String value;
   final IconData? icon;
@@ -447,10 +357,7 @@ class StatTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (icon != null) ...[
-            Icon(icon, color: color, size: 22),
-            const SizedBox(height: 8),
-          ],
+          if (icon != null) ...[Icon(icon, color: color, size: 22), const SizedBox(height: 8)],
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
@@ -458,14 +365,7 @@ class StatTile extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(label, style: CaboText.muted.copyWith(fontSize: 12)),
-          if (caption != null)
-            Text(
-              caption!,
-              style: CaboText.muted.copyWith(
-                fontSize: 11,
-                color: CaboColors.faint,
-              ),
-            ),
+          if (caption != null) Text(caption!, style: CaboText.muted.copyWith(fontSize: 11, color: CaboColors.faint)),
         ],
       ),
     );
@@ -473,12 +373,7 @@ class StatTile extends StatelessWidget {
 }
 
 class Bar extends StatelessWidget {
-  const Bar(
-    this.value, {
-    super.key,
-    this.color = CaboColors.yellow,
-    this.height = 8,
-  });
+  const Bar(this.value, {super.key, this.color = CaboColors.yellow, this.height = 8});
   final double value;
   final Color color;
   final double height;
@@ -487,12 +382,7 @@ class Bar extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(height),
-      child: LinearProgressIndicator(
-        value: value,
-        minHeight: height,
-        color: color,
-        backgroundColor: CaboColors.surfaceHigh,
-      ),
+      child: LinearProgressIndicator(value: value, minHeight: height, color: color, backgroundColor: CaboColors.surfaceHigh),
     );
   }
 }
@@ -542,9 +432,7 @@ class SelectTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mark = multi
-        ? (selected
-              ? Icons.check_box_rounded
-              : Icons.check_box_outline_blank_rounded)
+        ? (selected ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded)
         : (selected ? Icons.radio_button_checked : Icons.radio_button_off);
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -554,29 +442,19 @@ class SelectTile extends StatelessWidget {
         borderColor: selected ? CaboColors.yellow : CaboColors.surfaceHigh,
         child: Row(
           children: [
-            if (icon != null) ...[
-              IconBadge(icon!, size: 40),
-              const SizedBox(width: 14),
-            ],
+            if (icon != null) ...[IconBadge(icon!, size: 40), const SizedBox(width: 14)],
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: CaboText.body.copyWith(fontWeight: FontWeight.w600),
-                  ),
+                  Text(title, style: CaboText.body.copyWith(fontWeight: FontWeight.w600)),
                   if (subtitle != null) Text(subtitle!, style: CaboText.muted),
                 ],
               ),
             ),
             ?trailing,
             const SizedBox(width: 8),
-            Icon(
-              mark,
-              color: selected ? CaboColors.yellow : CaboColors.muted,
-              size: 24,
-            ),
+            Icon(mark, color: selected ? CaboColors.yellow : CaboColors.muted, size: 24),
           ],
         ),
       ),
@@ -586,15 +464,11 @@ class SelectTile extends StatelessWidget {
 
 /// Single-choice list of [SelectTile]s that manages its own selection.
 class SingleChoice extends StatefulWidget {
-  const SingleChoice({
-    super.key,
-    required this.options,
-    this.initial = 0,
-    this.icons,
-  });
+  const SingleChoice({super.key, required this.options, this.initial = 0, this.icons, this.onChanged});
   final List<(String, String?)> options;
   final List<IconData>? icons;
   final int initial;
+  final ValueChanged<int>? onChanged;
 
   @override
   State<SingleChoice> createState() => _SingleChoiceState();
@@ -613,7 +487,10 @@ class _SingleChoiceState extends State<SingleChoice> {
             subtitle: widget.options[i].$2,
             icon: widget.icons?[i],
             selected: selected == i,
-            onTap: () => setState(() => selected = i),
+            onTap: () {
+              setState(() => selected = i);
+              widget.onChanged?.call(i);
+            },
           ),
       ],
     );
@@ -621,17 +498,12 @@ class _SingleChoiceState extends State<SingleChoice> {
 }
 
 class ToggleTile extends StatefulWidget {
-  const ToggleTile(
-    this.title, {
-    super.key,
-    this.subtitle,
-    this.initial = true,
-    this.icon,
-  });
+  const ToggleTile(this.title, {super.key, this.subtitle, this.initial = true, this.icon, this.onChanged});
   final String title;
   final String? subtitle;
   final bool initial;
   final IconData? icon;
+  final ValueChanged<bool>? onChanged;
 
   @override
   State<ToggleTile> createState() => _ToggleTileState();
@@ -646,24 +518,23 @@ class _ToggleTileState extends State<ToggleTile> {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          if (widget.icon != null) ...[
-            IconBadge(widget.icon!, size: 40),
-            const SizedBox(width: 14),
-          ],
+          if (widget.icon != null) ...[IconBadge(widget.icon!, size: 40), const SizedBox(width: 14)],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  widget.title,
-                  style: CaboText.body.copyWith(fontWeight: FontWeight.w600),
-                ),
-                if (widget.subtitle != null)
-                  Text(widget.subtitle!, style: CaboText.muted),
+                Text(widget.title, style: CaboText.body.copyWith(fontWeight: FontWeight.w600)),
+                if (widget.subtitle != null) Text(widget.subtitle!, style: CaboText.muted),
               ],
             ),
           ),
-          Switch(value: value, onChanged: (v) => setState(() => value = v)),
+          Switch(
+            value: value,
+            onChanged: (v) {
+              setState(() => value = v);
+              widget.onChanged?.call(v);
+            },
+          ),
         ],
       ),
     );
@@ -672,15 +543,11 @@ class _ToggleTileState extends State<ToggleTile> {
 
 /// Wrap of selectable chips (multi-select).
 class ChipPicker extends StatefulWidget {
-  const ChipPicker({
-    super.key,
-    required this.options,
-    this.initial = const {},
-    this.single = false,
-  });
+  const ChipPicker({super.key, required this.options, this.initial = const {}, this.single = false, this.onChanged});
   final List<String> options;
   final Set<int> initial;
   final bool single;
+  final ValueChanged<Set<int>>? onChanged;
 
   @override
   State<ChipPicker> createState() => _ChipPickerState();
@@ -697,34 +564,29 @@ class _ChipPickerState extends State<ChipPicker> {
       children: [
         for (var i = 0; i < widget.options.length; i++)
           GestureDetector(
-            onTap: () => setState(() {
-              if (widget.single) {
-                selected = {i};
-              } else if (!selected.remove(i)) {
-                selected.add(i);
-              }
-            }),
+            onTap: () {
+              setState(() {
+                if (widget.single) {
+                  selected = {i};
+                } else if (!selected.remove(i)) {
+                  selected.add(i);
+                }
+              });
+              widget.onChanged?.call({...selected});
+            },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
               decoration: BoxDecoration(
-                color: selected.contains(i)
-                    ? CaboColors.yellow
-                    : CaboColors.surface,
+                color: selected.contains(i) ? CaboColors.yellow : CaboColors.surface,
                 borderRadius: BorderRadius.circular(30),
-                border: Border.all(
-                  color: selected.contains(i)
-                      ? CaboColors.yellow
-                      : CaboColors.surfaceHigh,
-                ),
+                border: Border.all(color: selected.contains(i) ? CaboColors.yellow : CaboColors.surfaceHigh),
               ),
               child: Text(
                 widget.options[i],
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: selected.contains(i)
-                      ? CaboColors.onYellow
-                      : CaboColors.text,
+                  color: selected.contains(i) ? CaboColors.onYellow : CaboColors.text,
                 ),
               ),
             ),
@@ -744,6 +606,12 @@ class CaboField extends StatelessWidget {
     this.suffix,
     this.maxLines = 1,
     this.keyboardType,
+    this.controller,
+    this.onChanged,
+    this.error,
+    this.readOnly = false,
+    this.onTap,
+    this.autofillHints,
   });
   final String label;
   final String? value;
@@ -752,6 +620,14 @@ class CaboField extends StatelessWidget {
   final Widget? suffix;
   final int maxLines;
   final TextInputType? keyboardType;
+
+  /// Supply a controller to read what was typed; [value] is then ignored.
+  final TextEditingController? controller;
+  final ValueChanged<String>? onChanged;
+  final String? error;
+  final bool readOnly;
+  final VoidCallback? onTap;
+  final Iterable<String>? autofillHints;
 
   @override
   Widget build(BuildContext context) {
@@ -763,15 +639,20 @@ class CaboField extends StatelessWidget {
           Text(label, style: CaboText.label),
           const SizedBox(height: 6),
           TextFormField(
-            initialValue: value,
+            controller: controller,
+            initialValue: controller == null ? value : null,
             maxLines: maxLines,
             keyboardType: keyboardType,
+            onChanged: onChanged,
+            readOnly: readOnly,
+            onTap: onTap,
+            autofillHints: autofillHints,
             style: CaboText.body.copyWith(fontSize: 15),
             decoration: InputDecoration(
               hintText: hint,
-              prefixIcon: icon == null
-                  ? null
-                  : Icon(icon, color: CaboColors.muted, size: 20),
+              errorText: error,
+              errorMaxLines: 3,
+              prefixIcon: icon == null ? null : Icon(icon, color: CaboColors.muted, size: 20),
               suffixIcon: suffix,
             ),
           ),
@@ -789,7 +670,8 @@ class StepScaffold extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.children,
-    required this.next,
+    this.next,
+    this.onNext,
     this.buttonLabel = 'Continue',
     this.totalSteps = 9,
   });
@@ -799,7 +681,12 @@ class StepScaffold extends StatelessWidget {
   final String title;
   final String subtitle;
   final List<Widget> children;
-  final String next;
+
+  /// Route to open on Continue, when there is nothing to save.
+  final String? next;
+
+  /// Saves the step; return normally to let the caller navigate.
+  final Future<void> Function()? onNext;
   final String buttonLabel;
 
   @override
@@ -819,7 +706,9 @@ class StepScaffold extends StatelessWidget {
         ],
       ),
       bottomNavigationBar: BottomActionBar(
-        child: CaboButton(buttonLabel, onPressed: () => go(context, next)),
+        child: onNext != null
+            ? ActionButton(buttonLabel, onPressed: onNext!)
+            : CaboButton(buttonLabel, onPressed: () => go(context, next!)),
       ),
     );
   }
@@ -860,10 +749,7 @@ class StateScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
           child: Column(
             children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: top ?? const SizedBox(height: 40),
-              ),
+              Align(alignment: Alignment.centerLeft, child: top ?? const SizedBox(height: 40)),
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
@@ -872,51 +758,29 @@ class StateScreen extends StatelessWidget {
                       Container(
                         width: 128,
                         height: 128,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: color.withValues(alpha: 0.12),
-                        ),
+                        decoration: BoxDecoration(shape: BoxShape.circle, color: color.withValues(alpha: 0.12)),
                         child: Center(
                           child: Container(
                             width: 88,
                             height: 88,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: color.withValues(alpha: 0.22),
-                            ),
+                            decoration: BoxDecoration(shape: BoxShape.circle, color: color.withValues(alpha: 0.22)),
                             child: Icon(icon, size: 44, color: color),
                           ),
                         ),
                       ),
                       const SizedBox(height: 28),
-                      Text(
-                        title,
-                        style: CaboText.h1,
-                        textAlign: TextAlign.center,
-                      ),
+                      Text(title, style: CaboText.h1, textAlign: TextAlign.center),
                       const SizedBox(height: 10),
-                      Text(
-                        message,
-                        style: CaboText.muted.copyWith(fontSize: 15),
-                        textAlign: TextAlign.center,
-                      ),
-                      if (extra != null) ...[
-                        const SizedBox(height: 24),
-                        extra!,
-                      ],
+                      Text(message, style: CaboText.muted.copyWith(fontSize: 15), textAlign: TextAlign.center),
+                      if (extra != null) ...[const SizedBox(height: 24), extra!],
                     ],
                   ),
                 ),
               ),
-              if (primary != null)
-                CaboButton(primary!, onPressed: onPrimary ?? () {}),
+              if (primary != null) CaboButton(primary!, onPressed: onPrimary ?? () {}),
               if (secondary != null) ...[
                 const SizedBox(height: 12),
-                CaboButton(
-                  secondary!,
-                  style: CaboButtonStyle.secondary,
-                  onPressed: onSecondary ?? () => back(context),
-                ),
+                CaboButton(secondary!, style: CaboButtonStyle.secondary, onPressed: onSecondary ?? () => back(context)),
               ],
             ],
           ),
@@ -928,13 +792,7 @@ class StateScreen extends StatelessWidget {
 
 /// Chat bubble for rider and support chats.
 class ChatBubble extends StatelessWidget {
-  const ChatBubble(
-    this.text, {
-    super.key,
-    required this.mine,
-    this.time,
-    this.note,
-  });
+  const ChatBubble(this.text, {super.key, required this.mine, this.time, this.note});
   final String text;
   final bool mine;
   final String? time;
@@ -961,23 +819,13 @@ class ChatBubble extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                text,
-                style: CaboText.body.copyWith(
-                  color: mine ? CaboColors.onYellow : CaboColors.text,
-                ),
-              ),
+              Text(text, style: CaboText.body.copyWith(color: mine ? CaboColors.onYellow : CaboColors.text)),
               if (note != null || time != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
                     [?note, ?time].join(' • '),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: mine
-                          ? CaboColors.onYellow.withValues(alpha: 0.7)
-                          : CaboColors.muted,
-                    ),
+                    style: TextStyle(fontSize: 11, color: mine ? CaboColors.onYellow.withValues(alpha: 0.7) : CaboColors.muted),
                   ),
                 ),
             ],
@@ -989,8 +837,10 @@ class ChatBubble extends StatelessWidget {
 }
 
 class ChatInput extends StatelessWidget {
-  const ChatInput({super.key, this.hint = 'Type a message'});
+  const ChatInput({super.key, this.hint = 'Type a message', this.controller, this.onSend});
   final String hint;
+  final TextEditingController? controller;
+  final VoidCallback? onSend;
 
   @override
   Widget build(BuildContext context) {
@@ -998,33 +848,31 @@ class ChatInput extends StatelessWidget {
       children: [
         Expanded(
           child: TextField(
+            controller: controller,
+            onSubmitted: onSend == null ? null : (_) => onSend!(),
+            textInputAction: TextInputAction.send,
             style: CaboText.body,
             decoration: InputDecoration(
               hintText: hint,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 18,
-                vertical: 14,
-              ),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             ),
           ),
         ),
         const SizedBox(width: 10),
-        Container(
-          width: 50,
-          height: 50,
-          decoration: const BoxDecoration(
-            color: CaboColors.yellow,
-            shape: BoxShape.circle,
+        Semantics(
+          button: true,
+          label: 'Send',
+          child: GestureDetector(
+            onTap: onSend,
+            child: Container(
+              width: 50,
+              height: 50,
+              decoration: const BoxDecoration(color: CaboColors.yellow, shape: BoxShape.circle),
+              child: const Icon(Icons.send_rounded, color: CaboColors.onYellow),
+            ),
           ),
-          child: const Icon(Icons.send_rounded, color: CaboColors.onYellow),
         ),
       ],
     );
@@ -1067,10 +915,7 @@ class RoundAction extends StatelessWidget {
             ),
           ),
         ),
-        if (label != null) ...[
-          const SizedBox(height: 6),
-          Text(label!, style: CaboText.label),
-        ],
+        if (label != null) ...[const SizedBox(height: 6), Text(label!, style: CaboText.label)],
       ],
     );
   }

@@ -64,6 +64,7 @@ class Loader<T> extends StatefulWidget {
 
 class _LoaderState<T> extends State<Loader<T>> {
   T? _data;
+  bool _loaded = false;
   Object? _error;
   bool _loading = true;
   int _run = 0;
@@ -82,6 +83,7 @@ class _LoaderState<T> extends State<Loader<T>> {
       if (!mounted || run != _run) return;
       setState(() {
         _data = data;
+        _loaded = true;
         _error = null;
         _loading = false;
       });
@@ -96,8 +98,8 @@ class _LoaderState<T> extends State<Loader<T>> {
 
   @override
   Widget build(BuildContext context) {
-    final data = _data;
-    if (data != null) return widget.builder(context, data, _load);
+    // The data itself may be null, for screens with nothing to show yet.
+    if (_loaded) return widget.builder(context, _data as T, _load);
     final Widget body = _loading
         ? Padding(
             padding: widget.padding,

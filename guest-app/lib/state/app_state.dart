@@ -159,19 +159,43 @@ class AppState extends ChangeNotifier {
   List<Json> _places = [];
 
   Future<List<Json>> searchPlaces([String q = '']) async {
-    final list = asJsonList(unwrap(await api.get('/places', query: {'q': q})));
+    final List<Json> list;
+    try {
+      list = asJsonList(unwrap(await api.get('/places', query: {'q': q})));
+    } on ApiException catch (e) {
+      // A backend from before /places existed: carry on without landmark names.
+      if (e.statusCode != 404) rethrow;
+      return [];
+    }
     if (q.isEmpty) _places = list;
     return list;
   }
 
   /// Where a ride can go: only the tourism locations the API lists.
   Future<List<Json>> destinations([String q = '']) async {
-    final list = asJsonList(
-      unwrap(await api.get('/places', query: {'q': q, 'kind': 'attraction'})),
-    );
+    try {
+      final list = asJsonList(
+        unwrap(await api.get('/places', query: {'q': q, 'kind': 'attraction'})),
+      );
+      return [
+        for (final p in list)
+          if (p.str('kind') == 'attraction') p,
+      ];
+    } on ApiException catch (e) {
+      if (e.statusCode != 404) rethrow;
+    }
+    // A backend from before /places existed: the attractions list holds the same locations.
     return [
-      for (final p in list)
-        if (p.str('kind') == 'attraction') p,
+      for (final a in asJsonList(
+        unwrap(await api.get('/attractions', query: {'q': q})),
+      ))
+        {
+          'name': a.str('name'),
+          'address': [?a.strOrNull('address'), a.str('area')].join(', '),
+          'lat': a.number('lat'),
+          'lng': a.number('lng'),
+          'kind': 'attraction',
+        },
     ];
   }
 

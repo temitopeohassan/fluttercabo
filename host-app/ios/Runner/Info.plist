@@ -2,6 +2,17 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Cabo uses your location to send you nearby ride requests while you are online.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Cabo uses the camera to photograph your documents.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Cabo lets you choose photos of your documents.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+		<string>https</string>
+	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

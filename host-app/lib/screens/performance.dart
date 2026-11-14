@@ -1,128 +1,89 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/widgets.dart';
+import 'onboarding.dart' show trainingLessons;
 
 // 6. Performance and growth.
+
+Future<Json> _performance(AppState state) async => unwrap(await state.api.get('/driver/performance')) as Json;
 
 class RatingsScreen extends StatelessWidget {
   const RatingsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    const dist = [(5, 0.86), (4, 0.10), (3, 0.03), (2, 0.01), (1, 0.0)];
-    return CaboScaffold(
-      title: 'Ratings',
-      children: [
-        CaboCard(
-          child: Row(
-            children: [
-              Column(
-                children: [
-                  Text('4.92', style: CaboText.display.copyWith(fontSize: 48)),
-                  const Stars(4.92),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Last 500 trips',
-                    style: CaboText.muted.copyWith(fontSize: 12),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 22),
-              Expanded(
-                child: Column(
-                  children: [
-                    for (final (stars, share) in dist)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 3),
-                        child: Row(
-                          children: [
-                            SizedBox(
-                              width: 14,
-                              child: Text('$stars', style: CaboText.label),
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(child: Bar(share, height: 7)),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SectionTitle('Compliments'),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 3,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
+    final state = AppScope.read(context);
+    return Loader<Json>(
+      load: () => _performance(state),
+      builder: (context, p, _) {
+        final count = p.integer('ratings_count');
+        final breakdown = p.obj('rating_breakdown') ?? const {};
+        final feedback = p.list('recent_feedback');
+        return CaboScaffold(
+          title: 'Ratings',
           children: [
-            for (final (icon, label, count) in const [
-              (Icons.cleaning_services_rounded, 'Clean car', 142),
-              (Icons.map_rounded, 'Knows Lagos', 118),
-              (Icons.forum_rounded, 'Great chat', 96),
-              (Icons.shield_rounded, 'Safe driving', 131),
-              (Icons.luggage_rounded, 'Helped with bags', 64),
-              (Icons.music_note_rounded, 'Good music', 37),
-            ])
-              CaboCard(
-                padding: const EdgeInsets.all(10),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(icon, color: CaboColors.yellow, size: 30),
-                    const SizedBox(height: 6),
-                    Text(
-                      label,
-                      textAlign: TextAlign.center,
-                      style: CaboText.label.copyWith(color: Colors.white),
-                    ),
-                    Text(
-                      '$count',
-                      style: CaboText.muted.copyWith(fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-        const SectionTitle('Recent feedback'),
-        for (final (rating, text, ago) in const [
-          (
-            5.0,
-            'Emeka waited patiently at the airport and knew every shortcut.',
-            'Today',
-          ),
-          (
-            5.0,
-            'Very professional. Gave us great restaurant tips in V.I.',
-            'Yesterday',
-          ),
-          (4.0, 'Good ride, but the AC could have been colder.', 'Sat'),
-        ])
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: CaboCard(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            CaboCard(
+              child: Row(
                 children: [
-                  Row(
+                  Column(
                     children: [
-                      Stars(rating, size: 16),
-                      const Spacer(),
-                      Text(ago, style: CaboText.label),
+                      Text(p.number('rating').toStringAsFixed(2), style: CaboText.display.copyWith(fontSize: 48)),
+                      Stars(p.number('rating')),
+                      const SizedBox(height: 4),
+                      Text(count == 0 ? 'No ratings yet' : plural(count, 'rating'), style: CaboText.muted.copyWith(fontSize: 12)),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  Text('"$text"', style: CaboText.body),
+                  const SizedBox(width: 22),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        for (final stars in const [5, 4, 3, 2, 1])
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 3),
+                            child: Row(
+                              children: [
+                                SizedBox(width: 14, child: Text('$stars', style: CaboText.label)),
+                                const SizedBox(width: 6),
+                                Expanded(child: Bar(count == 0 ? 0 : breakdown.integer('$stars') / count, height: 7)),
+                                SizedBox(
+                                  width: 30,
+                                  child: Text('${breakdown.integer('$stars')}', textAlign: TextAlign.end, style: CaboText.label),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
-          ),
-      ],
+            const SectionTitle('Recent feedback'),
+            if (feedback.isEmpty) const EmptyNotice('Comments from riders appear here.', icon: Icons.rate_review_rounded),
+            for (final f in feedback)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: CaboCard(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Stars(f.number('driver_rating'), size: 16),
+                          const Spacer(),
+                          Text(timeAgo(f.date('completed_at')), style: CaboText.label),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text('"${f.str('driver_feedback')}"', style: CaboText.body),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
@@ -132,18 +93,12 @@ class PerformanceStatsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget metric(
-      String label,
-      String value,
-      double ring,
-      Color color,
-      String target,
-      bool ok,
-    ) => CaboCard(
+    final state = AppScope.read(context);
+    Widget metric(String label, String value, double ring, Color color, String target, bool ok) => CaboCard(
       child: Row(
         children: [
           Ring(
-            value: ring,
+            value: ring.clamp(0, 1).toDouble(),
             size: 84,
             stroke: 8,
             color: color,
@@ -159,11 +114,7 @@ class PerformanceStatsScreen extends StatelessWidget {
                 Text(target, style: CaboText.muted),
                 const SizedBox(height: 8),
                 ok
-                    ? const Pill(
-                        'On track',
-                        color: CaboColors.brightGreen,
-                        icon: Icons.check,
-                      )
+                    ? const Pill('On track', color: CaboColors.brightGreen, icon: Icons.check)
                     : const Pill('Needs work', color: CaboColors.orange),
               ],
             ),
@@ -171,59 +122,63 @@ class PerformanceStatsScreen extends StatelessWidget {
         ],
       ),
     );
-    return CaboScaffold(
-      title: 'Performance',
-      children: [
-        Text('Last 30 days', style: CaboText.muted),
-        const SizedBox(height: 12),
-        metric(
-          'Acceptance rate',
-          '92%',
-          0.92,
-          CaboColors.brightGreen,
-          'Premium needs 85% or more',
-          true,
-        ),
-        const SizedBox(height: 12),
-        metric(
-          'Cancellation rate',
-          '2.1%',
-          0.21,
-          CaboColors.yellow,
-          'Keep it under 5%',
-          true,
-        ),
-        const SizedBox(height: 12),
-        metric(
-          'Hours online',
-          '164 h',
-          0.68,
-          CaboColors.blue,
-          'Premium needs 240 h in 60 days',
-          false,
-        ),
-        const SizedBox(height: 12),
-        const Row(
+    return Loader<Json>(
+      load: () => _performance(state),
+      builder: (context, p, _) {
+        final acceptance = p.number('acceptance_rate');
+        final cancellation = p.number('cancellation_rate');
+        return CaboScaffold(
+          title: 'Performance',
           children: [
-            Expanded(
-              child: StatTile(
-                'Trips completed',
-                '248',
-                icon: Icons.route_rounded,
-              ),
+            Text('Host since ${fmtDate(p.date('member_since'))}', style: CaboText.muted),
+            const SizedBox(height: 12),
+            metric(
+              'Acceptance rate',
+              '${acceptance.round()}%',
+              acceptance / 100,
+              CaboColors.brightGreen,
+              'Aim for 85% or more',
+              acceptance >= 85,
             ),
-            SizedBox(width: 10),
-            Expanded(
-              child: StatTile(
-                'On-time airport pickups',
-                '100%',
-                icon: Icons.flight_land_rounded,
-                color: CaboColors.brightGreen,
-              ),
+            const SizedBox(height: 12),
+            metric(
+              'Cancellation rate',
+              '${cancellation.toStringAsFixed(1)}%',
+              cancellation / 10,
+              CaboColors.yellow,
+              'Keep it under 5%',
+              cancellation < 5,
             ),
+            const SizedBox(height: 12),
+            metric(
+              'Rider rating',
+              p.number('rating').toStringAsFixed(2),
+              p.number('rating') / 5,
+              CaboColors.blue,
+              'From ${plural(p.integer('ratings_count'), 'rating')}',
+              p.number('rating') >= 4.7 || p.integer('ratings_count') == 0,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(child: StatTile('Trips completed', '${p.integer('completed_trips')}', icon: Icons.route_rounded)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: StatTile(
+                    'In the last 30 days',
+                    '${p.integer('completed_trips_30_days')}',
+                    icon: Icons.calendar_month_rounded,
+                    color: CaboColors.brightGreen,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            MenuTile(icon: Icons.star_rounded, title: 'Ratings and feedback', onTap: () => go(context, '/ratings')),
+            MenuTile(icon: Icons.workspace_premium_rounded, title: 'Tiers and badges', onTap: () => go(context, '/tiers')),
           ],
-        ),
-      ],
+        );
+      },
     );
   }
 }
@@ -233,138 +188,126 @@ class TiersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final state = AppScope.read(context);
     Widget req(String text, bool done) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         children: [
-          Icon(
-            done ? Icons.check_circle : Icons.radio_button_unchecked,
-            size: 20,
-            color: done ? CaboColors.brightGreen : CaboColors.muted,
-          ),
+          Icon(done ? Icons.check_circle : Icons.radio_button_unchecked, size: 20, color: done ? CaboColors.brightGreen : CaboColors.muted),
           const SizedBox(width: 10),
           Expanded(child: Text(text, style: CaboText.body)),
         ],
       ),
     );
-    return CaboScaffold(
-      title: 'Tiers and badges',
-      children: [
-        CaboCard(
-          color: CaboColors.surfaceHigh,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+    return Loader<Json>(
+      load: () => _performance(state),
+      builder: (context, p, _) {
+        final guide = p.flag('is_tour_guide');
+        final trips = p.integer('completed_trips');
+        final badges = [
+          (Icons.local_fire_department_rounded, '100 trips', trips >= 100),
+          (Icons.military_tech_rounded, '1,000 trips', trips >= 1000),
+          (Icons.star_rounded, 'Rated 4.8+', p.number('rating') >= 4.8 && p.integer('ratings_count') > 0),
+          (Icons.thumb_up_rounded, '90% acceptance', p.number('acceptance_rate') >= 90),
+          (Icons.school_rounded, 'Trained', p.flag('training_completed')),
+          (Icons.tour_rounded, 'Driver-guide', guide),
+        ];
+        return CaboScaffold(
+          title: 'Tiers and badges',
+          children: [
+            CaboCard(
+              color: CaboColors.surfaceHigh,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const IconBadge(Icons.workspace_premium_rounded),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Current tier', style: CaboText.label),
-                        Text('Standard', style: CaboText.h2),
-                      ],
-                    ),
+                  Row(
+                    children: [
+                      const IconBadge(Icons.workspace_premium_rounded),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Current tier', style: CaboText.label),
+                            Text(humanize(p.str('tier', 'standard')), style: CaboText.h2),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const Pill('Next: Premium'),
+                  const SizedBox(height: 12),
+                  Text('Cabo reviews tiers regularly. These are what the team looks at:', style: CaboText.muted),
+                  const SizedBox(height: 8),
+                  req('Rating 4.85 or higher (yours is ${p.number('rating').toStringAsFixed(2)})', p.number('rating') >= 4.85),
+                  req(
+                    'Acceptance rate 85% or higher (yours is ${p.number('acceptance_rate').round()}%)',
+                    p.number('acceptance_rate') >= 85,
+                  ),
+                  req(
+                    'Cancellation rate under 5% (yours is ${p.number('cancellation_rate').toStringAsFixed(1)}%)',
+                    p.number('cancellation_rate') < 5,
+                  ),
+                  req('Hospitality training completed', p.flag('training_completed')),
                 ],
               ),
-              const SizedBox(height: 14),
-              const Bar(0.5),
-              const SizedBox(height: 6),
-              Text('2 of 4 requirements met', style: CaboText.muted),
-              const SizedBox(height: 8),
-              req('Rating 4.85 or higher', true),
-              req('Acceptance rate 85% or higher', true),
-              req('Vehicle 2020 or newer (yours is 2019)', false),
-              req('240 hours online in 60 days (164 so far)', false),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        CaboCard(
-          onTap: () => go(context, '/tour-certification'),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+            ),
+            const SizedBox(height: 12),
+            CaboCard(
+              onTap: () => go(context, '/tour-certification'),
+              child: Row(
                 children: [
-                  const IconBadge(
-                    Icons.tour_rounded,
-                    color: CaboColors.brightGreen,
-                  ),
+                  const IconBadge(Icons.tour_rounded, color: CaboColors.brightGreen),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Tour Guide eligibility', style: CaboText.h3),
-                        Text(
-                          'Certification 3 of 6 lessons',
-                          style: CaboText.muted,
-                        ),
+                        Text('Tour guide eligibility', style: CaboText.h3),
+                        Text(guide ? 'You are a certified driver-guide' : 'Not certified yet', style: CaboText.muted),
                       ],
                     ),
                   ),
                   const Icon(Icons.chevron_right, color: CaboColors.muted),
                 ],
               ),
-              const SizedBox(height: 12),
-              const Bar(0.5, color: CaboColors.brightGreen),
-            ],
-          ),
-        ),
-        const SectionTitle('Badges'),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 3,
-          mainAxisSpacing: 10,
-          crossAxisSpacing: 10,
-          childAspectRatio: 0.9,
-          children: [
-            for (final (icon, label, earned) in const [
-              (Icons.flight_rounded, 'Airport pro', true),
-              (Icons.nightlight_round, 'Night owl', true),
-              (Icons.local_fire_department_rounded, '100 trips', true),
-              (Icons.diversity_3_rounded, 'Tourist favourite', false),
-              (Icons.translate_rounded, 'Multilingual', true),
-              (Icons.military_tech_rounded, '1,000 trips', false),
-            ])
-              Opacity(
-                opacity: earned ? 1 : 0.4,
-                child: CaboCard(
-                  padding: const EdgeInsets.all(8),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor: earned
-                            ? CaboColors.yellow
-                            : CaboColors.surfaceHigh,
-                        child: Icon(
-                          icon,
-                          color: earned
-                              ? CaboColors.onYellow
-                              : CaboColors.muted,
-                        ),
+            ),
+            const SectionTitle('Badges'),
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 3,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 0.9,
+              children: [
+                for (final (icon, label, earned) in badges)
+                  Opacity(
+                    opacity: earned ? 1 : 0.4,
+                    child: CaboCard(
+                      padding: const EdgeInsets.all(8),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircleAvatar(
+                            radius: 24,
+                            backgroundColor: earned ? CaboColors.yellow : CaboColors.surfaceHigh,
+                            child: Icon(icon, color: earned ? CaboColors.onYellow : CaboColors.muted),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            label,
+                            textAlign: TextAlign.center,
+                            style: CaboText.label.copyWith(color: Colors.white),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        label,
-                        textAlign: TextAlign.center,
-                        style: CaboText.label.copyWith(color: Colors.white),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
+              ],
+            ),
           ],
-        ),
-      ],
+        );
+      },
     );
   }
 }
@@ -374,40 +317,42 @@ class TourCertificationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const lessons = [
-      ('Lagos history in 20 minutes', true),
-      ('Guiding a group safely', true),
-      ('Storytelling for visitors', true),
-      ('Lagos Island heritage sites', false),
-      ('Lekki and the coast', false),
-      ('Handling difficult situations', false),
+    final guide = AppScope.of(context).driver?.flag('is_tour_guide') ?? false;
+    const topics = [
+      'Lagos history in 20 minutes',
+      'Guiding a group safely',
+      'Storytelling for visitors',
+      'Lagos Island heritage sites',
+      'Lekki and the coast',
+      'Handling difficult situations',
     ];
     return CaboScaffold(
       title: 'Tour guide certification',
-      bottom: CaboButton(
-        'Continue lesson 4',
-        onPressed: () => go(context, '/training-quiz'),
-      ),
+      bottom: guide
+          ? CaboButton('See my tour jobs', onPressed: () => replace(context, '/jobs'))
+          : CaboButton('Ask to be certified', onPressed: () => go(context, '/support-chat')),
       children: [
         CaboCard(
+          borderColor: guide ? CaboColors.brightGreen : null,
           child: Row(
             children: [
-              Ring(
-                value: 0.5,
-                size: 90,
-                color: CaboColors.brightGreen,
-                child: Text('3/6', style: CaboText.h2),
+              IconBadge(
+                guide ? Icons.verified_rounded : Icons.tour_rounded,
+                color: guide ? CaboColors.brightGreen : CaboColors.yellow,
+                size: 56,
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Pill('In progress', color: CaboColors.yellow),
+                    Pill(guide ? 'Certified' : 'Not certified yet', color: guide ? CaboColors.brightGreen : CaboColors.yellow),
                     const SizedBox(height: 8),
-                    Text('Become a Cabo driver-guide', style: CaboText.h3),
+                    Text('Cabo driver-guide', style: CaboText.h3),
                     Text(
-                      'Earn ₦30,000 – ₦60,000 per tour',
+                      guide
+                          ? 'Tours you are assigned to guide appear on your jobs board.'
+                          : 'Certified hosts guide tours for partner operators. The Cabo team runs the course in person.',
                       style: CaboText.muted,
                     ),
                   ],
@@ -416,29 +361,13 @@ class TourCertificationScreen extends StatelessWidget {
             ],
           ),
         ),
-        const SectionTitle('Steps'),
-        for (final (title, done) in lessons)
+        const SectionTitle('What the course covers'),
+        for (final title in topics)
           MenuTile(
-            icon: done ? Icons.check_rounded : Icons.play_arrow_rounded,
-            color: done ? CaboColors.brightGreen : CaboColors.yellow,
+            icon: guide ? Icons.check_rounded : Icons.menu_book_rounded,
+            color: guide ? CaboColors.brightGreen : CaboColors.yellow,
             title: title,
-            subtitle: done ? 'Completed' : '12 min lesson',
-            onTap: () {},
           ),
-        MenuTile(
-          icon: Icons.assignment_rounded,
-          color: CaboColors.muted,
-          title: 'Assessment',
-          subtitle: '20 questions + a practice tour with a Cabo mentor',
-          trailing: const Icon(Icons.lock_rounded, color: CaboColors.muted),
-        ),
-        MenuTile(
-          icon: Icons.verified_rounded,
-          color: CaboColors.muted,
-          title: 'Certified driver-guide',
-          subtitle: 'Unlocks tour jobs on the Jobs board',
-          trailing: const Icon(Icons.lock_rounded, color: CaboColors.muted),
-        ),
       ],
     );
   }
@@ -449,85 +378,53 @@ class LearningCentreScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final trained = AppScope.of(context).driver?.flag('training_completed') ?? false;
     return CaboScaffold(
       title: 'Learning centre',
       children: [
         CaboCard(
-          color: CaboColors.yellow,
+          onTap: () => go(context, '/training'),
           child: Row(
             children: [
+              IconBadge(Icons.school_rounded, color: trained ? CaboColors.brightGreen : CaboColors.yellow),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'FEATURED',
-                      style: CaboText.label.copyWith(
-                        color: CaboColors.onYellow,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Get ready for Detty December',
-                      style: CaboText.h2.copyWith(color: CaboColors.onYellow),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Visitor demand triples. Here is how top drivers plan their month.',
-                      style: CaboText.body.copyWith(color: CaboColors.onYellow),
-                    ),
+                    Text('Host training', style: CaboText.h3),
+                    Text(trained ? 'Completed' : 'Not completed yet', style: CaboText.muted),
                   ],
                 ),
               ),
-              const Icon(
-                Icons.celebration_rounded,
-                size: 64,
-                color: CaboColors.onYellow,
-              ),
+              const Icon(Icons.chevron_right, color: CaboColors.muted),
             ],
           ),
         ),
-        const SizedBox(height: 16),
-        const ChipPicker(
-          options: [
-            'All',
-            'Earn more',
-            'Serving tourists',
-            'Safety',
-            'App tips',
-          ],
-          initial: {0},
-          single: true,
+        const SizedBox(height: 10),
+        CaboCard(
+          onTap: () => go(context, '/tour-certification'),
+          child: Row(
+            children: [
+              const IconBadge(Icons.tour_rounded, color: CaboColors.blue),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Tour guide certification', style: CaboText.h3),
+                    Text('Guide tours for extra income', style: CaboText.muted),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: CaboColors.muted),
+            ],
+          ),
         ),
-        const SizedBox(height: 12),
-        for (final (icon, title, meta) in const [
-          (
-            Icons.trending_up_rounded,
-            '5 ways to earn more on airport runs',
-            'Earn more • 4 min read',
-          ),
-          (
-            Icons.waving_hand_rounded,
-            'Greeting visitors: phrases in French and Spanish',
-            'Serving tourists • 3 min',
-          ),
-          (
-            Icons.restaurant_rounded,
-            'Restaurants riders always ask about',
-            'Serving tourists • 5 min',
-          ),
-          (
-            Icons.health_and_safety_rounded,
-            'Driving safely at night in Lagos',
-            'Safety • 6 min',
-          ),
-          (
-            Icons.phone_android_rounded,
-            'Using the destination filter',
-            'App tips • 2 min',
-          ),
-        ])
-          MenuTile(icon: icon, title: title, subtitle: meta, onTap: () {}),
+        const SectionTitle('Training topics'),
+        for (final (title, time, icon) in trainingLessons) MenuTile(icon: icon, title: title, subtitle: time),
+        const SizedBox(height: 8),
+        Text('Video lessons in the app are coming soon. Until then the Cabo team covers these in person.', style: CaboText.muted),
       ],
     );
   }

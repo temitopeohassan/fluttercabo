@@ -5,12 +5,7 @@ import '../theme.dart';
 /// The Cabo wordmark: "Cab" followed by an "o" drawn as a ring with the
 /// yellow location pin inside, and a yellow smile under the letters.
 class CaboLogo extends StatelessWidget {
-  const CaboLogo({
-    super.key,
-    this.size = 64,
-    this.hostLabel = true,
-    this.color = Colors.white,
-  });
+  const CaboLogo({super.key, this.size = 64, this.hostLabel = true, this.color = Colors.white});
   final double size;
   final bool hostLabel;
   final Color color;
@@ -27,22 +22,11 @@ class CaboLogo extends StatelessWidget {
           if (hostLabel) ...[
             SizedBox(height: size * 0.14),
             Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: size * 0.18,
-                vertical: size * 0.05,
-              ),
-              decoration: BoxDecoration(
-                color: CaboColors.yellow,
-                borderRadius: BorderRadius.circular(size),
-              ),
+              padding: EdgeInsets.symmetric(horizontal: size * 0.18, vertical: size * 0.05),
+              decoration: BoxDecoration(color: CaboColors.yellow, borderRadius: BorderRadius.circular(size)),
               child: Text(
                 'HOST',
-                style: TextStyle(
-                  fontSize: size * 0.2,
-                  fontWeight: FontWeight.w800,
-                  color: CaboColors.onYellow,
-                  letterSpacing: size * 0.06,
-                ),
+                style: TextStyle(fontSize: size * 0.2, fontWeight: FontWeight.w800, color: CaboColors.onYellow, letterSpacing: size * 0.06),
               ),
             ),
           ],
@@ -82,8 +66,7 @@ class _WordmarkPainter extends CustomPainter {
 
   double get _baseline => _text.computeLineMetrics().first.baseline;
 
-  Size get layoutSize =>
-      Size(_text.width + fontSize * 0.04, _baseline + fontSize * 0.3);
+  Size get layoutSize => Size(_text.width + fontSize * 0.04, _baseline + fontSize * 0.3);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -91,12 +74,7 @@ class _WordmarkPainter extends CustomPainter {
     final s = fontSize;
     final baseline = _baseline;
 
-    Rect box(int start) => _text
-        .getBoxesForSelection(
-          TextSelection(baseOffset: start, extentOffset: start + 1),
-        )
-        .first
-        .toRect();
+    Rect box(int start) => _text.getBoxesForSelection(TextSelection(baseOffset: start, extentOffset: start + 1)).first.toRect();
     final b = box(2);
     final o = box(3);
 
@@ -123,18 +101,8 @@ class _WordmarkPainter extends CustomPainter {
     canvas.drawCircle(headC, headR, yellow);
     final tail = Path()
       ..moveTo(headC.dx - headR * 0.9, headC.dy + headR * 0.45)
-      ..quadraticBezierTo(
-        headC.dx - headR * 0.5,
-        tip.dy - headR * 0.6,
-        tip.dx,
-        tip.dy,
-      )
-      ..quadraticBezierTo(
-        headC.dx + headR * 0.5,
-        tip.dy - headR * 0.6,
-        headC.dx + headR * 0.9,
-        headC.dy + headR * 0.45,
-      )
+      ..quadraticBezierTo(headC.dx - headR * 0.5, tip.dy - headR * 0.6, tip.dx, tip.dy)
+      ..quadraticBezierTo(headC.dx + headR * 0.5, tip.dy - headR * 0.6, headC.dx + headR * 0.9, headC.dy + headR * 0.45)
       ..close();
     canvas.drawPath(tail, yellow);
     canvas.drawCircle(headC, headR * 0.4, Paint()..color = CaboColors.onYellow);
@@ -142,12 +110,7 @@ class _WordmarkPainter extends CustomPainter {
     // Smile from under the "b" to under the "o".
     final smile = Path()
       ..moveTo(b.left + b.width * 0.15, baseline + s * 0.08)
-      ..quadraticBezierTo(
-        (b.left + o.center.dx) / 2,
-        baseline + s * 0.3,
-        o.left + o.width * 0.35,
-        baseline + s * 0.08,
-      );
+      ..quadraticBezierTo((b.left + o.center.dx) / 2, baseline + s * 0.3, o.left + o.width * 0.35, baseline + s * 0.08);
     canvas.drawPath(
       smile,
       Paint()
@@ -159,17 +122,12 @@ class _WordmarkPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _WordmarkPainter old) =>
-      old.fontSize != fontSize || old.color != color;
+  bool shouldRepaint(covariant _WordmarkPainter old) => old.fontSize != fontSize || old.color != color;
 }
 
 /// Lagos skyline silhouette with a line drawing of the Lekki-Ikoyi Link Bridge.
 class SkylinePainter extends CustomPainter {
-  SkylinePainter({
-    this.buildingColor = const Color(0xFF0D4A2E),
-    this.lineColor = Colors.white,
-    this.water = false,
-  });
+  SkylinePainter({this.buildingColor = const Color(0xFF0D4A2E), this.lineColor = Colors.white, this.water = false});
 
   final Color buildingColor;
   final Color lineColor;
@@ -204,17 +162,11 @@ class SkylinePainter extends CustomPainter {
       // Windows.
       final win = Paint()..color = lineColor.withValues(alpha: 0.07);
       for (var y = rect.top + 8; y < rect.bottom - 6; y += 10) {
-        canvas.drawRect(
-          Rect.fromLTWH(rect.left + 4, y, rect.width - 8, 3),
-          win,
-        );
+        canvas.drawRect(Rect.fromLTWH(rect.left + 4, y, rect.width - 8, 3), win);
       }
     }
     // Antenna on the tallest tower.
-    canvas.drawRect(
-      Rect.fromLTWH(0.645 * w, base - 0.82 * base - 18, 2, 18),
-      fill,
-    );
+    canvas.drawRect(Rect.fromLTWH(0.645 * w, base - 0.82 * base - 18, 2, 18), fill);
 
     final line = Paint()
       ..color = lineColor.withValues(alpha: 0.85)
@@ -245,11 +197,7 @@ class SkylinePainter extends CustomPainter {
       final wp = Paint()..color = lineColor.withValues(alpha: 0.12);
       for (var i = 0; i < 4; i++) {
         final y = base + 8 + i * 9.0;
-        canvas.drawLine(
-          Offset(w * (0.1 + i * 0.07), y),
-          Offset(w * (0.9 - i * 0.05), y),
-          wp..strokeWidth = 1.2,
-        );
+        canvas.drawLine(Offset(w * (0.1 + i * 0.07), y), Offset(w * (0.9 - i * 0.05), y), wp..strokeWidth = 1.2);
       }
     }
   }
@@ -260,13 +208,7 @@ class SkylinePainter extends CustomPainter {
 
 /// Decorative illustration: an icon in layered circles.
 class HeroIllustration extends StatelessWidget {
-  const HeroIllustration(
-    this.icon, {
-    super.key,
-    this.size = 200,
-    this.color = CaboColors.yellow,
-    this.badges = const [],
-  });
+  const HeroIllustration(this.icon, {super.key, this.size = 200, this.color = CaboColors.yellow, this.badges = const []});
   final IconData icon;
   final double size;
   final Color color;
@@ -281,18 +223,12 @@ class HeroIllustration extends StatelessWidget {
         alignment: Alignment.center,
         children: [
           Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: color.withValues(alpha: 0.08),
-            ),
+            decoration: BoxDecoration(shape: BoxShape.circle, color: color.withValues(alpha: 0.08)),
           ),
           Container(
             width: size * 0.72,
             height: size * 0.72,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: color.withValues(alpha: 0.14),
-            ),
+            decoration: BoxDecoration(shape: BoxShape.circle, color: color.withValues(alpha: 0.14)),
           ),
           Container(
             width: size * 0.48,
@@ -302,11 +238,7 @@ class HeroIllustration extends StatelessWidget {
           ),
           for (var i = 0; i < badges.length; i++)
             Align(
-              alignment: [
-                const Alignment(0.85, -0.75),
-                const Alignment(-0.9, 0.55),
-                const Alignment(0.8, 0.8),
-              ][i % 3],
+              alignment: [const Alignment(0.85, -0.75), const Alignment(-0.9, 0.55), const Alignment(0.8, 0.8)][i % 3],
               child: Container(
                 width: size * 0.2,
                 height: size * 0.2,
@@ -315,11 +247,7 @@ class HeroIllustration extends StatelessWidget {
                   borderRadius: BorderRadius.circular(size * 0.07),
                   border: Border.all(color: CaboColors.outline),
                 ),
-                child: Icon(
-                  badges[i],
-                  color: CaboColors.yellow,
-                  size: size * 0.1,
-                ),
+                child: Icon(badges[i], color: CaboColors.yellow, size: size * 0.1),
               ),
             ),
         ],
