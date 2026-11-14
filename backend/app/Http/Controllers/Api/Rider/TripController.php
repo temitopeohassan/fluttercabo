@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Rider;
 
 use App\Http\Controllers\Controller;
+use App\Models\Attraction;
 use App\Models\PromoCode;
 use App\Models\RideType;
 use App\Models\Trip;
@@ -10,6 +11,7 @@ use App\Models\Zone;
 use App\Services\FareCalculator;
 use App\Services\TripLifecycle;
 use App\Services\Wallet;
+use App\Support\Geo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -129,6 +131,7 @@ class TripController extends Controller
             'lat' => 'required|numeric|between:-90,90',
             'lng' => 'required|numeric|between:-180,180',
         ]);
+        $this->requireTourismLocation('stops', $stop['lat'], $stop['lng'], 'a stop');
         if (! in_array($trip->status, ['requested', 'accepted', 'arrived', 'in_progress'], true)) {
             throw ValidationException::withMessages(['trip' => 'Stops can only be added to an active ride.']);
         }
@@ -194,7 +197,34 @@ class TripController extends Controller
         abort_unless($trip->rider_id === $request->user()->id, 404);
     }
 
+    /**
+     * Cabo rides only go to tourism locations: the published attractions.
+     * A point counts when it is within 300 m of one.
+     */
+    private function requireTourismLocation(string $field, $lat, $lng, string $what): void
+    {
+        foreach (Attraction::where('is_published', true)->get(['lat', 'lng']) as $a) {
+            if (Geo::distanceKm((float) $lat, (float) $lng, (float) $a->lat, (float) $a->lng) <= 0.3) {
+                return;
+            }
+        }
+        throw ValidationException::withMessages([
+            $field => "Cabo rides go to Lagos tourism locations. Choose $what from the list of attractions.",
+        ]);
+    }
+
     private function validateRoute(Request $request): array
+    {
+        $data = $this->routeRules($request);
+        $this->requireTourismLocation('dropoff', $data['dropoff_lat'], $data['dropoff_lng'], 'a destination');
+        foreach ($data['stops'] ?? [] as $stop) {
+            $this->requireTourismLocation('stops', $stop['lat'], $stop['lng'], 'each stop');
+        }
+
+        return $data;
+    }
+
+    private function routeRules(Request $request): array
     {
         return $request->validate([
             'pickup_lat' => 'required|numeric|between:-90,90',

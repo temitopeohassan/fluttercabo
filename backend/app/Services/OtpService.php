@@ -5,11 +5,16 @@ namespace App\Services;
 use App\Models\OtpCode;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Throwable;
 
 /**
- * Six-digit sign-in codes for the rider and driver apps. Codes expire after
- * ten minutes and allow five attempts. Delivery is logged until an SMS and
- * email provider is configured.
+ * Six-digit sign-in codes for the Guest and Host apps. Codes expire after
+ * ten minutes and allow five attempts.
+ *
+ * Email codes are sent with the configured mailer. SMS codes are only
+ * written to the log until an SMS provider is connected; until then set
+ * CABO_DEMO_OTP so the apps can sign in with a fixed code.
  */
 class OtpService
 {
@@ -17,10 +22,18 @@ class OtpService
 
     public const MAX_ATTEMPTS = 5;
 
-    /** @return string The plain code, returned to callers only outside production. */
+    /** The fixed demo code, or null when real codes are in use. */
+    public static function demoCode(): ?string
+    {
+        $code = config('cabo.demo_otp');
+
+        return $code ? (string) $code : null;
+    }
+
+    /** @return string The plain code. Callers only reveal it in demo mode. */
     public function send(string $app, string $identifier, string $channel): string
     {
-        $code = app()->environment('production') ? (string) random_int(100000, 999999) : (string) config('cabo.demo_otp', '123456');
+        $code = self::demoCode() ?? (string) random_int(100000, 999999);
 
         OtpCode::where('app', $app)->where('identifier', $identifier)->whereNull('used_at')->delete();
         OtpCode::create([
@@ -31,6 +44,18 @@ class OtpService
             'expires_at' => now()->addMinutes(self::TTL_MINUTES),
         ]);
 
+        if (self::demoCode() === null && $channel === 'email') {
+            try {
+                Mail::raw(
+                    "Your Cabo sign-in code is {$code}. It expires in ".self::TTL_MINUTES." minutes. If you did not ask for it, ignore this email.",
+                    fn ($message) => $message->to($identifier)->subject("{$code} is your Cabo sign-in code"),
+                );
+            } catch (Throwable $e) {
+                Log::error("Could not email the sign-in code to {$identifier}: {$e->getMessage()}");
+            }
+        }
+
+        // Until an SMS provider is connected this log line is the only way to read an SMS code.
         Log::info("Cabo {$app} OTP for {$identifier} via {$channel}: {$code}");
 
         return $code;

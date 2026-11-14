@@ -17,6 +17,7 @@ Route::prefix('v1')->group(function () {
     Route::get('tours', [PublicController::class, 'tours']);
     Route::get('tours/{tour:slug}', [PublicController::class, 'tour']);
     Route::get('tours/{tour:slug}/slots', [PublicController::class, 'tourSlots']);
+    Route::get('places', [PublicController::class, 'places']);
     Route::get('attractions', [PublicController::class, 'attractions']);
     Route::get('attractions/{attraction:slug}', [PublicController::class, 'attraction']);
     Route::post('waitlist', [PublicController::class, 'waitlist'])->middleware('throttle:10,1');
@@ -126,6 +127,7 @@ Route::prefix('v1')->group(function () {
 
         Route::get('earnings', [Driver\EarningsController::class, 'summary']);
         Route::get('earnings/transactions', [Driver\EarningsController::class, 'transactions']);
+        Route::get('performance', [Driver\EarningsController::class, 'performance']);
         Route::get('payouts', [Driver\EarningsController::class, 'payouts']);
         Route::post('payouts/instant', [Driver\EarningsController::class, 'cashOut']);
     });

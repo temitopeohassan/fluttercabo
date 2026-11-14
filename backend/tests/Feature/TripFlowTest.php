@@ -47,6 +47,23 @@ class TripFlowTest extends TestCase
         $this->assertSame(1.2, $economy['surge_multiplier']);
     }
 
+    public function test_rides_only_go_to_tourism_locations(): void
+    {
+        Sanctum::actingAs($this->rider(), ['rider']);
+        // Ikeja City Mall is not an attraction.
+        $elsewhere = ['dropoff_lat' => 6.6142, 'dropoff_lng' => 3.3581, 'dropoff_address' => 'Ikeja City Mall'] + self::ROUTE;
+
+        $this->postJson('/api/v1/rider/fare-estimates', $elsewhere)->assertStatus(422)->assertJsonValidationErrors('dropoff');
+        $this->postJson('/api/v1/rider/trips', $elsewhere + ['ride_type' => 'economy', 'payment_method' => 'card'])
+            ->assertStatus(422)->assertJsonValidationErrors('dropoff');
+
+        $places = $this->getJson('/api/v1/places?kind=attraction')->assertOk()->json('data');
+        $this->assertNotEmpty($places);
+        $this->assertSame(['attraction'], array_values(array_unique(array_column($places, 'kind'))));
+        // Every listed tourism location is accepted as a destination.
+        $this->postJson('/api/v1/rider/fare-estimates', ['dropoff_lat' => $places[0]['lat'], 'dropoff_lng' => $places[0]['lng']] + self::ROUTE)->assertOk();
+    }
+
     public function test_full_ride_from_request_to_rating(): void
     {
         $rider = $this->rider();

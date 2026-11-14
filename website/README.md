@@ -40,8 +40,8 @@ They appear under **Waitlist** in the control panel, which can export them as CS
 
 - **Logo:** `logo-wordmark-dark.png` (header) and `logo-lockup-light.png` (footer, with the Ride • Tour • Travel tagline) are cut out of the Cabo logo artwork supplied by the team. `logo-wordmark-light.png` and `logo-lockup-dark.png` are the other colour variants. `favicon.png` and `apple-touch-icon.png` are the ring-and-pin "o". The source artwork is a small JPEG, so replace these with exports from the original vector logo when it is available.
 - **Hero:** `lekki-bridge-sunset.jpg`, the Lekki-Ikoyi Link Bridge at sunset.
-- **App screenshots:** `app-*.jpg` come from `screenshots/rider/`. Regenerate them from there if the app screens change.
+- **App screenshots:** `app-*.jpg` come from `screenshots/guest/`. Regenerate them from there if the app screens change.
 
 ### Photos
 
-The destination photos are the ones supplied for the rider app (see `rider-app/assets/photos/CREDITS.md`). Confirm the right to use each one before the site goes live; the night skyline photo carries an "f27" watermark.
+The destination photos are the ones supplied for the rider app (see `guest-app/assets/photos/CREDITS.md`). Confirm the right to use each one before the site goes live; the night skyline photo carries an "f27" watermark.

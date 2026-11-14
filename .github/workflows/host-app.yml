@@ -1,0 +1,17 @@
+name: Host app
+
+on:
+  # Runs on pushes to any branch, so pull requests from this repo are covered too.
+  push:
+    paths:
+      - 'host-app/**'
+      - '.github/workflows/host-app.yml'
+      - '.github/workflows/flutter-android.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    uses: ./.github/workflows/flutter-android.yml
+    with:
+      app-dir: host-app
+      artifact-name: cabo-host-apk
