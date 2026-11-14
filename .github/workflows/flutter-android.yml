@@ -1,5 +1,5 @@
 # Shared job: test a Flutter app and build a release APK.
-# Called by rider-app.yml and driver-app.yml.
+# Called by guest-app.yml and host-app.yml.
 name: Flutter Android build
 
 on:
