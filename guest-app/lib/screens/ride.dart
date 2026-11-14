@@ -1,11 +1,29 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../widgets/widgets.dart';
 
 // 3. Cabo Ride.
+//
+// The map is still a drawn stand-in (see CaboMap), so marker positions are
+// fixed. Addresses, fares, drivers and trip status all come from the API.
 
 const _pickup = Offset(0.56, 0.36);
 const _dropoff = Offset(0.8, 0.82);
+
+String _short(String address) => address.split(',').first.trim();
+
+IconData _rideIcon(String code) => switch (code) {
+  'economy' => Icons.directions_car_rounded,
+  'comfort' => Icons.directions_car_filled_rounded,
+  'suv' => Icons.airport_shuttle_rounded,
+  _ => Icons.local_taxi_rounded,
+};
+
+void _goHome(BuildContext context) =>
+    Navigator.of(context).pushNamedAndRemoveUntil('/home', (_) => false);
 
 class _MapTopBar extends StatelessWidget {
   const _MapTopBar(this.title);
@@ -77,35 +95,207 @@ class _Stop extends StatelessWidget {
   }
 }
 
-class WhereToScreen extends StatelessWidget {
-  const WhereToScreen({super.key});
+/// Pickup, stops and drop-off of a trip from the API.
+class _TripStops extends StatelessWidget {
+  const _TripStops(this.trip);
+  final Json trip;
 
   @override
   Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _Stop(CaboColors.green, 'PICKUP', trip.str('pickup_address')),
+        for (final s in trip.list('stops'))
+          _Stop(CaboColors.blue, 'STOP', s.str('address')),
+        _Stop(CaboColors.red, 'DROP-OFF', trip.str('dropoff_address')),
+      ],
+    );
+  }
+}
+
+class WhereToScreen extends StatefulWidget {
+  const WhereToScreen({super.key});
+
+  @override
+  State<WhereToScreen> createState() => _WhereToScreenState();
+}
+
+class _WhereToScreenState extends State<WhereToScreen> {
+  final _query = TextEditingController();
+  Timer? _debounce;
+  int _search = 0;
+  List<Json> _results = [];
+  List<Json> _all = [];
+  List<Json> _saved = [];
+  List<Json> _recent = [];
+  String? _locationError;
+  bool _locating = false;
+  bool _started = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    final state = AppScope.read(context);
+    if (state.dropoff != null) _query.text = state.dropoff!.str('name');
+    if (state.pickup == null) _locate();
+    _loadShortcuts();
+    _run();
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _query.dispose();
+    super.dispose();
+  }
+
+  Future<void> _locate() async {
+    final state = AppScope.read(context);
+    setState(() {
+      _locating = true;
+      _locationError = null;
+    });
+    try {
+      final place = await state.currentPlace();
+      if (state.pickup == null) state.setPickup(place);
+    } catch (e) {
+      if (mounted) _locationError = errorText(e);
+    }
+    if (mounted) setState(() => _locating = false);
+  }
+
+  Future<void> _loadShortcuts() async {
+    final api = AppScope.read(context).api;
+    try {
+      final results = await Future.wait([
+        api.get('/rider/saved-places'),
+        api.get('/rider/trips'),
+      ]);
+      final seen = <String>{};
+      final recent = <Json>[];
+      for (final t in (results[1] as Json).list('data')) {
+        if (seen.add(t.str('dropoff_address')) && recent.length < 3) {
+          recent.add({
+            'name': _short(t.str('dropoff_address')),
+            'address': t.str('dropoff_address'),
+            'lat': t.number('dropoff_lat'),
+            'lng': t.number('dropoff_lng'),
+          });
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _saved = [
+          for (final p in asJsonList(unwrap(results[0])))
+            {
+              'name': p.str('label'),
+              'address': p.str('address'),
+              'lat': p.number('lat'),
+              'lng': p.number('lng'),
+            },
+        ];
+        _recent = recent;
+      });
+    } on ApiException {
+      // Shortcuts are optional; search still works.
+    }
+  }
+
+  Future<void> _run() async {
+    final run = ++_search;
+    try {
+      final state = AppScope.read(context);
+      final list = await state.destinations(_query.text.trim());
+      if (_query.text.trim().isEmpty) _all = list;
+      if (mounted && run == _search) setState(() => _results = list);
+    } on ApiException catch (e) {
+      if (mounted && run == _search)
+        showMessage(context, e.message, error: true);
+    }
+  }
+
+  /// Past drop-offs that are still tourism locations.
+  List<Json> get _recentDestinations => [
+    for (final r in _recent)
+      ?AppState.destinationAt(_all, r.number('lat'), r.number('lng')),
+  ];
+
+  void _choose(Json place) {
+    final state = AppScope.read(context);
+    if (state.pickup == null) {
+      showMessage(context, 'Choose your pickup point first.', error: true);
+      return;
+    }
+    state.setDropoff(place);
+    go(context, '/confirm-pickup');
+  }
+
+  Future<void> _choosePickup() async {
+    final state = AppScope.read(context);
+    final known = await state.searchPlaces().catchError((_) => <Json>[]);
+    if (!mounted) return;
+    final chosen = await showModalBottomSheet<Json>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _PlacePicker(
+        title: 'Pickup point',
+        places: [..._saved, ...known],
+        onLocate: state.currentPlace,
+      ),
+    );
+    if (chosen != null) state.setPickup(chosen);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = AppScope.of(context);
+    final pickup = state.pickup;
     return CaboScaffold(
       title: 'Where to?',
+      // A destination chosen elsewhere (an attraction or search) can be confirmed straight away.
+      bottom: state.dropoff != null && pickup != null
+          ? CaboButton(
+              'Continue to ${_short(state.dropoff!.str('name'))}',
+              onPressed: () => go(context, '/confirm-pickup'),
+            )
+          : null,
       children: [
         CaboCard(
           padding: const EdgeInsets.all(12),
           child: Column(
             children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.my_location_rounded,
-                    color: CaboColors.green,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Eko Hotel & Suites, Victoria Island',
-                      style: CaboText.body.copyWith(
-                        fontWeight: FontWeight.w600,
+              InkWell(
+                onTap: _choosePickup,
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.my_location_rounded,
+                      color: CaboColors.green,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        pickup?.str('address') ??
+                            (_locating
+                                ? 'Finding your location…'
+                                : 'Choose your pickup point'),
+                        style: CaboText.body.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: pickup == null
+                              ? CaboColors.muted
+                              : CaboColors.ink,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                    Text(
+                      'Change',
+                      style: CaboText.label.copyWith(color: CaboColors.green),
+                    ),
+                  ],
+                ),
               ),
               const Padding(
                 padding: EdgeInsets.only(left: 30),
@@ -120,13 +310,20 @@ class WhereToScreen extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: TextFormField(
-                      autofocus: false,
-                      initialValue: 'Nike Art',
+                    child: TextField(
+                      controller: _query,
+                      onChanged: (_) {
+                        _debounce?.cancel();
+                        _debounce = Timer(
+                          const Duration(milliseconds: 350),
+                          _run,
+                        );
+                      },
                       style: CaboText.body.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                       decoration: const InputDecoration(
+                        hintText: 'Search for a destination',
                         isDense: true,
                         filled: false,
                         border: InputBorder.none,
@@ -141,73 +338,215 @@ class WhereToScreen extends StatelessWidget {
             ],
           ),
         ),
+        if (_locationError != null && pickup == null)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: CaboCard(
+              color: CaboColors.yellowSoft,
+              onTap: _choosePickup,
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.location_off_rounded,
+                    color: CaboColors.orange,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '$_locationError Or tap here to choose a pickup point.',
+                      style: CaboText.body.copyWith(fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        if (state.scheduledAt != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: CaboCard(
+              color: CaboColors.greenSoft,
+              child: Row(
+                children: [
+                  const Icon(Icons.schedule_rounded, color: CaboColors.green),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Pickup on ${fmtDayTime(state.scheduledAt)}',
+                      style: CaboText.body.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => state.setSchedule(null),
+                    child: const Text('Ride now'),
+                  ),
+                ],
+              ),
+            ),
+          ),
         const SizedBox(height: 14),
         Row(
           children: [
-            for (final (icon, label, route) in const [
-              (Icons.home_rounded, 'Hotel', '/choose-ride'),
-              (Icons.work_rounded, 'Work', '/choose-ride'),
-              (Icons.map_rounded, 'On map', '/pick-on-map'),
-              (Icons.schedule_rounded, 'Later', '/schedule-ride'),
-            ])
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: CaboCard(
-                    color: CaboColors.surface,
-                    onTap: () => go(context, route),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Column(
-                      children: [
-                        Icon(icon, color: CaboColors.green),
-                        const SizedBox(height: 4),
-                        Text(
-                          label,
-                          style: CaboText.label.copyWith(color: CaboColors.ink),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+            Expanded(
+              child: _Shortcut(
+                Icons.map_rounded,
+                'Nearby',
+                () => go(context, '/pick-on-map'),
               ),
+            ),
+            Expanded(
+              child: _Shortcut(
+                Icons.schedule_rounded,
+                'Later',
+                () => go(context, '/schedule-ride'),
+              ),
+            ),
           ],
         ),
-        const SectionTitle('Results'),
-        MenuTile(
-          icon: Icons.palette_rounded,
-          title: 'Nike Art Gallery',
-          subtitle: '2 Elegushi Beach Rd, Lekki • 14.6 km',
-          onTap: () => go(context, '/confirm-pickup'),
+        SectionTitle(
+          _query.text.trim().isEmpty ? 'Tourism locations' : 'Results',
         ),
-        MenuTile(
-          icon: Icons.place_rounded,
-          title: 'Nike Lake Resort',
-          subtitle: 'Enugu • not served by Cabo yet',
-          color: CaboColors.muted,
-        ),
-        const SectionTitle('Recent'),
-        for (final (name, sub) in const [
-          ('Murtala Muhammed Airport, Terminal 2', 'Ikeja'),
-          ('Terra Kulture', 'Tiamiyu Savage St, Victoria Island'),
-          ('The Palms Shopping Mall', 'Lekki'),
-        ])
-          MenuTile(
-            icon: Icons.history_rounded,
-            title: name,
-            subtitle: sub,
-            color: CaboColors.muted,
-            onTap: () => go(context, '/confirm-pickup'),
+        if (_results.isEmpty)
+          EmptyNotice(
+            _query.text.trim().isEmpty
+                ? 'No tourism locations are available yet.'
+                : 'No tourism location matches "${_query.text.trim()}". Cabo rides go to Lagos attractions.',
+            icon: Icons.search_off_rounded,
           ),
+        for (final p in _results.take(12))
+          MenuTile(
+            icon: Icons.attractions_rounded,
+            title: p.str('name'),
+            subtitle: p.str('address'),
+            onTap: () => _choose(p),
+          ),
+        if (_recentDestinations.isNotEmpty && _query.text.trim().isEmpty) ...[
+          const SectionTitle('Recent'),
+          for (final p in _recentDestinations)
+            MenuTile(
+              icon: Icons.history_rounded,
+              title: p.str('name'),
+              subtitle: p.str('address'),
+              color: CaboColors.muted,
+              onTap: () => _choose(p),
+            ),
+        ],
       ],
     );
   }
 }
+
+class _Shortcut extends StatelessWidget {
+  const _Shortcut(this.icon, this.label, this.onTap);
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: CaboCard(
+        color: CaboColors.surface,
+        onTap: onTap,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+        child: Column(
+          children: [
+            Icon(icon, color: CaboColors.green),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: CaboText.label.copyWith(color: CaboColors.ink),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Bottom sheet for choosing a place, with "use my location" at the top.
+class _PlacePicker extends StatelessWidget {
+  const _PlacePicker({
+    required this.title,
+    required this.places,
+    this.onLocate,
+  });
+  final String title;
+  final List<Json> places;
+  final Future<Json> Function()? onLocate;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.7,
+        ),
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+          children: [
+            Text(title, style: CaboText.h2),
+            const SizedBox(height: 8),
+            if (onLocate != null)
+              MenuTile(
+                icon: Icons.my_location_rounded,
+                title: 'Use my current location',
+                onTap: () async {
+                  try {
+                    final place = await onLocate!();
+                    if (context.mounted) Navigator.of(context).pop(place);
+                  } catch (e) {
+                    if (context.mounted)
+                      showMessage(context, errorText(e), error: true);
+                  }
+                },
+              ),
+            for (final p in places)
+              MenuTile(
+                icon: Icons.place_rounded,
+                title: p.str('name'),
+                subtitle: p.str('address'),
+                onTap: () => Navigator.of(context).pop(p),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Known places sorted by distance from [from].
+List<(Json, double)> _nearest(List<Json> places, Json from) {
+  final list = [
+    for (final p in places)
+      (
+        p,
+        AppState.distanceKm(
+          from.number('lat'),
+          from.number('lng'),
+          p.number('lat'),
+          p.number('lng'),
+        ),
+      ),
+  ]..sort((a, b) => a.$2.compareTo(b.$2));
+  return list;
+}
+
+String _km(double km) =>
+    km < 1 ? '${(km * 1000).round()} m' : '${km.toStringAsFixed(1)} km';
 
 class PickOnMapScreen extends StatelessWidget {
   const PickOnMapScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final state = AppScope.read(context);
     return MapLayout(
       map: const Stack(
         children: [
@@ -224,19 +563,46 @@ class PickOnMapScreen extends StatelessWidget {
           ),
         ],
       ),
-      top: const _MapTopBar('Move the map to set destination'),
-      panel: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Nike Art Gallery', style: CaboText.h2),
-          Text('2 Elegushi Beach Rd, Lekki', style: CaboText.muted),
-          const SizedBox(height: 16),
-          CaboButton(
-            'Confirm destination',
-            onPressed: () => go(context, '/confirm-pickup'),
-          ),
-        ],
+      top: const _MapTopBar('Tourism locations near you'),
+      panel: Loader<List<(Json, double)>>(
+        padding: const EdgeInsets.all(12),
+        load: () async {
+          final from = state.pickup ?? await state.currentPlace();
+          return _nearest(
+            await state.destinations(),
+            from,
+          ).where((p) => p.$2 > 0.05).take(6).toList();
+        },
+        builder: (context, places, _) => Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Choose a destination', style: CaboText.h2),
+            Text(
+              'Cabo rides go to Lagos tourism locations. Closest first.',
+              style: CaboText.muted,
+            ),
+            const SizedBox(height: 6),
+            for (final (place, km) in places)
+              MenuTile(
+                icon: Icons.place_rounded,
+                title: place.str('name'),
+                subtitle: '${place.str('address')} • ${_km(km)}',
+                onTap: () {
+                  if (state.pickup == null) {
+                    showMessage(
+                      context,
+                      'Choose your pickup point first.',
+                      error: true,
+                    );
+                    return;
+                  }
+                  state.setDropoff(place);
+                  go(context, '/confirm-pickup');
+                },
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -254,124 +620,143 @@ class _ConfirmPickupScreenState extends State<ConfirmPickupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const spots = [
-      (
-        'Eko Hotel main entrance',
-        'By the fountain • 20 m',
-        Icons.hotel_rounded,
-      ),
-      (
-        'Eko Hotel side gate',
-        'Adetokunbo Ademola St • 150 m',
-        Icons.door_sliding_rounded,
-      ),
-      (
-        'Kuramo Waters bus stop',
-        'Landmark drivers know well • 300 m',
-        Icons.directions_bus_rounded,
-      ),
-    ];
-    return MapLayout(
-      map: const CaboMap(
-        markers: [
-          MapMarker(_pickup, MarkerKind.pickup, label: 'Main entrance'),
-        ],
-      ),
-      top: const _MapTopBar('Confirm pickup'),
-      panel: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Meet your driver at a landmark', style: CaboText.h3),
-          const SizedBox(height: 10),
-          for (var i = 0; i < spots.length; i++)
-            SelectTile(
-              icon: spots[i].$3,
-              title: spots[i].$1,
-              subtitle: spots[i].$2,
-              selected: selected == i,
-              onTap: () => setState(() => selected = i),
+    final state = AppScope.read(context);
+    final pickup = state.pickup;
+    if (pickup == null || state.dropoff == null) {
+      return Scaffold(
+        appBar: caboAppBar(context, 'Confirm pickup'),
+        body: EmptyNotice(
+          'Choose where you are going first.',
+          icon: Icons.place_rounded,
+          action: 'Choose destination',
+          onAction: () => replace(context, '/where-to'),
+        ),
+      );
+    }
+    return Loader<List<Json>>(
+      // Offer the exact spot plus well-known landmarks within 400 m.
+      load: () async => [
+        pickup,
+        for (final (p, km) in _nearest(await state.searchPlaces(), pickup))
+          if (km > 0.03 && km <= 0.4) {...p, 'distance': km},
+      ].take(3).toList(),
+      builder: (context, spots, _) => MapLayout(
+        map: CaboMap(
+          markers: [
+            MapMarker(
+              _pickup,
+              MarkerKind.pickup,
+              label: _short(spots[selected].str('name')),
             ),
-          const SizedBox(height: 4),
-          CaboButton(
-            'Confirm pickup',
-            onPressed: () => go(context, '/choose-ride'),
-          ),
-        ],
+          ],
+        ),
+        top: const _MapTopBar('Confirm pickup'),
+        panel: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              spots.length > 1
+                  ? 'Meet your driver at a landmark'
+                  : 'Meet your driver here',
+              style: CaboText.h3,
+            ),
+            const SizedBox(height: 10),
+            for (var i = 0; i < spots.length; i++)
+              SelectTile(
+                icon: i == 0 ? Icons.my_location_rounded : Icons.place_rounded,
+                title: spots[i].str('name'),
+                subtitle: i == 0
+                    ? spots[i].str('address')
+                    : 'Landmark drivers know • ${_km(spots[i].number('distance'))}',
+                selected: selected == i,
+                onTap: () => setState(() => selected = i),
+              ),
+            const SizedBox(height: 4),
+            CaboButton(
+              'Confirm pickup',
+              onPressed: () {
+                if (selected != 0) state.setPickup(spots[selected]);
+                go(context, '/choose-ride');
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class ChooseRideScreen extends StatefulWidget {
+class ChooseRideScreen extends StatelessWidget {
   const ChooseRideScreen({super.key});
 
-  @override
-  State<ChooseRideScreen> createState() => _ChooseRideScreenState();
-}
-
-class _ChooseRideScreenState extends State<ChooseRideScreen> {
-  int selected = 1;
+  Future<void> _request(BuildContext context) async {
+    final state = AppScope.read(context);
+    final scheduled = state.scheduledAt != null;
+    try {
+      await state.requestRide();
+    } on ApiException catch (e) {
+      if (e.fields.containsKey('pickup_lat') && context.mounted) {
+        go(context, '/outside-area');
+        return;
+      }
+      rethrow;
+    }
+    if (!context.mounted) return;
+    if (scheduled) {
+      showMessage(context, 'Ride scheduled. You can see it under Bookings.');
+      Navigator.of(
+        context,
+      ).pushNamedAndRemoveUntil('/bookings', (r) => r.settings.name == '/home');
+    } else {
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/finding-driver',
+        (r) => r.settings.name == '/home',
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    const options = [
-      (
-        'Economy',
-        Icons.directions_car_rounded,
-        '4 min away • 2.3 km',
-        2500,
-        4,
-        null,
-      ),
-      (
-        'Comfort',
-        Icons.directions_car_filled_rounded,
-        '8 min away • 3.5 km',
-        3500,
-        4,
-        null,
-      ),
-      (
-        'SUV',
-        Icons.airport_shuttle_rounded,
-        '10 min away • 5.2 km',
-        5000,
-        6,
-        '×1.2',
-      ),
-      (
-        'Premium',
-        Icons.local_taxi_rounded,
-        '12 min away • 6.0 km',
-        7500,
-        4,
-        null,
-      ),
-    ];
+    final state = AppScope.of(context);
+    if (state.pickup == null || state.dropoff == null) {
+      return Scaffold(
+        appBar: caboAppBar(context, 'Book a Ride'),
+        body: EmptyNotice(
+          'Choose where you are going to see prices.',
+          icon: Icons.local_taxi_rounded,
+          action: 'Choose destination',
+          onAction: () => replace(context, '/where-to'),
+        ),
+      );
+    }
     return Scaffold(
       appBar: caboAppBar(context, 'Book a Ride'),
       body: Column(
         children: [
-          const Expanded(
+          Expanded(
             flex: 5,
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: ClipRRect(
-                borderRadius: BorderRadius.all(Radius.circular(20)),
+                borderRadius: const BorderRadius.all(Radius.circular(20)),
                 child: CaboMap(
-                  route: [
+                  route: const [
                     _pickup,
                     Offset(0.62, 0.52),
                     Offset(0.78, 0.6),
                     _dropoff,
                   ],
                   markers: [
-                    MapMarker(_pickup, MarkerKind.pickup, label: 'Eko Hotel'),
+                    MapMarker(
+                      _pickup,
+                      MarkerKind.pickup,
+                      label: _short(state.pickup!.str('name')),
+                    ),
                     MapMarker(
                       _dropoff,
                       MarkerKind.dropoff,
-                      label: 'Nike Art Gallery',
+                      label: _short(state.dropoff!.str('name')),
                     ),
                   ],
                 ),
@@ -380,67 +765,83 @@ class _ChooseRideScreenState extends State<ChooseRideScreen> {
           ),
           Expanded(
             flex: 7,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-              children: [
-                for (var i = 0; i < options.length; i++)
-                  RideOption(
-                    name: options[i].$1,
-                    icon: options[i].$2,
-                    eta: options[i].$3,
-                    fare: options[i].$4,
-                    seats: options[i].$5,
-                    surge: options[i].$6,
-                    selected: selected == i,
-                    onTap: () => setState(() => selected = i),
-                  ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => go(context, '/payment-method'),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.credit_card_rounded,
-                                color: CaboColors.blue,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Visa •• 4242',
-                                style: CaboText.body.copyWith(
-                                  fontWeight: FontWeight.w600,
+            child: Loader<bool>(
+              load: () async {
+                if (state.estimates.isEmpty) await state.loadEstimates();
+                return true;
+              },
+              builder: (context, _, _) => ListView(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                children: [
+                  for (final e in state.estimates)
+                    RideOption(
+                      name: e.str('name'),
+                      icon: _rideIcon(e.str('ride_type')),
+                      eta:
+                          '${e.number('distance_km').toStringAsFixed(1)} km • about ${e.integer('duration_minutes')} min',
+                      fare: e.integer('fare_total'),
+                      homeFare: state.homePrice(e.integer('fare_total')),
+                      seats: e.integer('seats', 4),
+                      surge: e.number('surge_multiplier', 1) > 1
+                          ? '×${e.number('surge_multiplier')}'
+                          : null,
+                      selected: state.rideType == e.str('ride_type'),
+                      onTap: () => state.chooseRide(e.str('ride_type')),
+                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => go(context, '/payment-method'),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.credit_card_rounded,
+                                  color: CaboColors.blue,
                                 ),
-                              ),
-                              const Icon(
-                                Icons.expand_more,
-                                color: CaboColors.muted,
-                              ),
-                            ],
+                                const SizedBox(width: 8),
+                                Text(
+                                  paymentLabels[state.paymentMethod] ?? 'Card',
+                                  style: CaboText.body.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const Icon(
+                                  Icons.expand_more,
+                                  color: CaboColors.muted,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    TextButton(
-                      onPressed: () => go(context, '/fare-breakdown'),
-                      child: Text(
-                        'Fare details',
-                        style: CaboText.label.copyWith(color: CaboColors.green),
+                      TextButton(
+                        onPressed: () => go(context, '/fare-breakdown'),
+                        child: Text(
+                          'Fare details',
+                          style: CaboText.label.copyWith(
+                            color: CaboColors.green,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],
       ),
       bottomNavigationBar: BottomActionBar(
-        child: CaboButton(
-          'Request Ride',
-          onPressed: () => go(context, '/finding-driver'),
+        child: ActionButton(
+          state.scheduledAt == null
+              ? 'Request Ride'
+              : 'Schedule for ${fmtDayTime(state.scheduledAt)}',
+          busyLabel: 'Requesting…',
+          enabled: state.estimates.isNotEmpty,
+          onPressed: () => _request(context),
         ),
       ),
     );
@@ -452,30 +853,63 @@ class FareBreakdownScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final state = AppScope.of(context);
+    final e = state.estimate;
+    if (e == null) {
+      return CaboScaffold(
+        title: 'Fare breakdown',
+        children: const [
+          EmptyNotice(
+            'Choose a destination to see the fare.',
+            icon: Icons.receipt_long_rounded,
+          ),
+        ],
+      );
+    }
+    final total = e.integer('fare_total');
+    final home = state.homePrice(total);
+    final surge = e.number('surge_multiplier', 1);
     return CaboScaffold(
       title: 'Fare breakdown',
       children: [
-        Center(child: Text('Comfort • upfront fare', style: CaboText.muted)),
+        Center(
+          child: Text('${e.str('name')} • upfront fare', style: CaboText.muted),
+        ),
         Center(
           child: Text(
-            naira(3500),
+            naira(total),
             style: CaboText.display.copyWith(color: CaboColors.green),
           ),
         ),
-        Center(
-          child: Text('${gbp(3500)} at today\'s rate', style: CaboText.muted),
-        ),
+        if (home.isNotEmpty)
+          Center(child: Text("$home at today's rate", style: CaboText.muted)),
         const SizedBox(height: 20),
         CaboCard(
           child: Column(
             children: [
-              InfoRow('Base fare', naira(700)),
-              InfoRow('Distance (14.6 km)', naira(1800)),
-              InfoRow('Time (about 32 min)', naira(600)),
-              InfoRow('Lekki toll gate', naira(400)),
-              const InfoRow('Discounts', '₦0'),
+              InfoRow('Base fare', naira(e.integer('fare_base'))),
+              InfoRow(
+                'Distance (${e.number('distance_km').toStringAsFixed(1)} km)',
+                naira(e.integer('fare_distance')),
+              ),
+              InfoRow(
+                'Time (about ${e.integer('duration_minutes')} min)',
+                naira(e.integer('fare_time')),
+              ),
+              if (surge > 1)
+                InfoRow('Busy area (${e.str('zone')})', '× $surge'),
+              if (e.integer('fare_stops') > 0)
+                InfoRow('Extra stops', naira(e.integer('fare_stops'))),
+              if (e.integer('tolls') > 0)
+                InfoRow('Lekki toll gate', naira(e.integer('tolls'))),
+              InfoRow(
+                'Discounts',
+                e.integer('discount') > 0
+                    ? '−${naira(e.integer('discount'))}'
+                    : '₦0',
+              ),
               const Divider(height: 20),
-              InfoRow('Total', naira(3500), bold: true),
+              InfoRow('Total', naira(total), bold: true),
             ],
           ),
         ),
@@ -491,8 +925,8 @@ class FareBreakdownScreen extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'This price is fixed unless you add a stop or change the destination. '
-                'Card payments are held at booking and charged when the trip ends.',
+                'This price is fixed unless you add a stop or keep your driver waiting. '
+                'A short ride never costs less than the minimum fare for its type.',
                 style: CaboText.muted,
               ),
             ),
@@ -506,36 +940,47 @@ class FareBreakdownScreen extends StatelessWidget {
 class PaymentMethodScreen extends StatelessWidget {
   const PaymentMethodScreen({super.key});
 
+  static const _methods = ['card', 'wallet', 'bank_transfer', 'cash'];
+
   @override
   Widget build(BuildContext context) {
+    final state = AppScope.of(context);
+    final balance = state.rider?.integer('wallet_balance') ?? 0;
     return CaboScaffold(
       title: 'Payment method',
-      bottom: CaboButton('Use Visa •• 4242', onPressed: () => back(context)),
+      bottom: CaboButton(
+        'Use ${paymentLabels[state.paymentMethod]}',
+        onPressed: () => back(context),
+      ),
       children: [
-        const SingleChoice(
-          icons: [
+        SingleChoice(
+          initial: _methods.indexOf(state.paymentMethod).clamp(0, 3),
+          onChanged: (i) => state.choosePayment(_methods[i]),
+          icons: const [
             Icons.credit_card_rounded,
             Icons.account_balance_wallet_rounded,
             Icons.account_balance_rounded,
             Icons.payments_rounded,
           ],
           options: [
-            ('Visa •• 4242', 'UK card • held at booking, charged at the end'),
-            ('Cabo Wallet', 'Balance ₦12,400'),
+            ('Card', 'Charged when the trip ends'),
+            ('Cabo Wallet', 'Balance ${naira(balance)}'),
             ('Bank transfer', 'Pay to a virtual account'),
             ('Cash', 'Pay the driver at the end of the ride'),
           ],
         ),
         MenuTile(
-          icon: Icons.add_card_rounded,
-          title: 'Add a card',
-          subtitle: 'Visa, Mastercard or Verve',
-          onTap: () => go(context, '/add-card'),
+          icon: Icons.account_balance_wallet_rounded,
+          title: 'Top up your wallet',
+          subtitle: 'Add money by card or bank transfer',
+          onTap: () => go(context, '/top-up'),
         ),
         MenuTile(
           icon: Icons.local_offer_rounded,
           title: 'Promo code',
-          subtitle: 'WELCOME20 applies to tours',
+          subtitle: state.promoCode == null
+              ? 'Add a code'
+              : '${state.promoCode} applied',
           color: CaboColors.orange,
           onTap: () => go(context, '/promos'),
         ),
@@ -544,11 +989,113 @@ class PaymentMethodScreen extends StatelessWidget {
   }
 }
 
-class FindingDriverScreen extends StatelessWidget {
+/// Keeps a ride screen in step with the trip: polls the API while the
+/// screen is open and moves to the screen that matches the trip's status.
+mixin _TripWatcher<T extends StatefulWidget> on State<T> {
+  /// The route this screen is shown at.
+  String get route;
+
+  late AppState _state;
+  bool _watching = false;
+  bool _leaving = false;
+  Object? loadError;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_watching) return;
+    _watching = true;
+    _state = AppScope.read(context);
+    _state.addListener(_sync);
+    _state.watchTrip();
+    if (_state.trip == null) {
+      _state.findActiveTrip().then(
+        (t) {
+          if (mounted && t == null) setState(() => loadError = 'none');
+        },
+        onError: (Object e) {
+          if (mounted) setState(() => loadError = e);
+        },
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _state.removeListener(_sync);
+    _state.unwatchTrip();
+    super.dispose();
+  }
+
+  /// Call before navigating away on purpose, so [_sync] does not also navigate.
+  void leaving() => _leaving = true;
+
+  void _sync() {
+    final trip = _state.trip;
+    if (!mounted || _leaving || trip == null) return;
+    final status = trip.str('status');
+    if (status == 'cancelled' || status == 'no_show') {
+      _leaving = true;
+      final by = trip.str('cancelled_by');
+      showMessage(
+        context,
+        status == 'no_show'
+            ? 'Your driver waited and then left. The ride was cancelled.'
+            : by == 'rider'
+            ? 'Ride cancelled.'
+            : 'Your ride was cancelled by ${by == 'driver' ? 'the driver' : 'Cabo'}. You have not been charged.',
+      );
+      _goHome(context);
+      return;
+    }
+    final target = AppState.tripRoute(trip);
+    if (target != null && target != route) {
+      _leaving = true;
+      Navigator.of(context).pushReplacementNamed(target);
+    } else {
+      setState(() {});
+    }
+  }
+
+  /// Shown while the trip loads, or when there is no ride in progress.
+  Widget noTrip(String title) {
+    return Scaffold(
+      appBar: caboAppBar(context, title),
+      body: loadError == null
+          ? const Center(
+              child: CircularProgressIndicator(color: CaboColors.green),
+            )
+          : loadError == 'none'
+          ? EmptyNotice(
+              'You have no ride in progress.',
+              icon: Icons.local_taxi_rounded,
+              action: 'Book a ride',
+              onAction: () => replace(context, '/where-to'),
+            )
+          : ErrorNotice(errorText(loadError!)),
+    );
+  }
+}
+
+class FindingDriverScreen extends StatefulWidget {
   const FindingDriverScreen({super.key});
 
   @override
+  State<FindingDriverScreen> createState() => _FindingDriverScreenState();
+}
+
+class _FindingDriverScreenState extends State<FindingDriverScreen>
+    with _TripWatcher {
+  @override
+  String get route => '/finding-driver';
+
+  @override
   Widget build(BuildContext context) {
+    final trip = _state.trip;
+    if (trip == null) return noTrip('Finding a driver');
+    final waited = DateTime.now().difference(
+      trip.date('created_at') ?? DateTime.now(),
+    );
     return MapLayout(
       map: const Stack(
         children: [
@@ -562,26 +1109,40 @@ class FindingDriverScreen extends StatelessWidget {
       panel: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          GestureDetector(
-            onTap: () => replace(context, '/driver-on-way'),
-            child: Text('Finding your driver…', style: CaboText.h2),
-          ),
+          Text('Finding your driver…', style: CaboText.h2),
           const SizedBox(height: 4),
           Text(
-            'Matching you with the nearest vetted Comfort driver.',
+            waited.inMinutes >= 3
+                ? 'This is taking longer than usual. You can keep waiting or cancel for free.'
+                : 'Matching you with the nearest vetted ${trip.obj('ride_type')?.str('name') ?? ''} driver.',
             textAlign: TextAlign.center,
             style: CaboText.muted,
           ),
           const SizedBox(height: 14),
           const LinearProgressIndicator(value: kScreenshotMode ? 0.45 : null),
           const SizedBox(height: 18),
-          const _Stop(CaboColors.green, 'PICKUP', 'Eko Hotel main entrance'),
-          const _Stop(CaboColors.red, 'DROP-OFF', 'Nike Art Gallery, Lekki'),
+          _TripStops(trip),
           const SizedBox(height: 14),
-          CaboButton(
+          ActionButton(
             'Cancel request',
             style: CaboButtonStyle.secondary,
-            onPressed: () => back(context),
+            busyLabel: 'Cancelling…',
+            onPressed: () async {
+              leaving();
+              try {
+                await _state.cancelTrip('Cancelled while finding a driver');
+              } catch (_) {
+                _leaving = false;
+                rethrow;
+              }
+              if (context.mounted) {
+                showMessage(
+                  context,
+                  'Request cancelled. You have not been charged.',
+                );
+                _goHome(context);
+              }
+            },
           ),
         ],
       ),
@@ -589,11 +1150,26 @@ class FindingDriverScreen extends StatelessWidget {
   }
 }
 
-class DriverOnTheWayScreen extends StatelessWidget {
+class DriverOnTheWayScreen extends StatefulWidget {
   const DriverOnTheWayScreen({super.key});
 
   @override
+  State<DriverOnTheWayScreen> createState() => _DriverOnTheWayScreenState();
+}
+
+class _DriverOnTheWayScreenState extends State<DriverOnTheWayScreen>
+    with _TripWatcher {
+  @override
+  String get route => '/driver-on-way';
+
+  @override
   Widget build(BuildContext context) {
+    final trip = _state.trip;
+    if (trip == null) return noTrip('Your driver');
+    final name =
+        trip.obj('driver')?.str('first_name', 'Your driver') ?? 'Your driver';
+    final arrived = trip.str('status') == 'arrived';
+    final waitingFee = trip.integer('waiting_fee');
     return MapLayout(
       map: const CaboMap(
         route: [
@@ -610,17 +1186,24 @@ class DriverOnTheWayScreen extends StatelessWidget {
       top: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: CaboColors.green,
+          color: arrived ? CaboColors.yellow : CaboColors.green,
           borderRadius: BorderRadius.circular(18),
         ),
         child: Row(
           children: [
-            const Icon(Icons.schedule_rounded, color: Colors.white),
+            Icon(
+              arrived ? Icons.where_to_vote_rounded : Icons.schedule_rounded,
+              color: arrived ? CaboColors.onYellow : Colors.white,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Emeka arrives in 4 min at the main entrance',
-                style: CaboText.h3.copyWith(color: Colors.white),
+                arrived
+                    ? '$name has arrived at ${_short(trip.str('pickup_address'))}'
+                    : '$name is on the way to ${_short(trip.str('pickup_address'))}',
+                style: CaboText.h3.copyWith(
+                  color: arrived ? CaboColors.onYellow : Colors.white,
+                ),
               ),
             ),
           ],
@@ -629,7 +1212,7 @@ class DriverOnTheWayScreen extends StatelessWidget {
       panel: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const DriverCard(),
+          DriverCard(trip),
           const SizedBox(height: 14),
           CaboCard(
             color: CaboColors.yellowSoft,
@@ -638,14 +1221,25 @@ class DriverOnTheWayScreen extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    'Give this PIN to your driver to start the trip',
+                    'Give this PIN to your driver once you are in the car',
                     style: CaboText.body,
                   ),
                 ),
-                Text('2741', style: CaboText.h1.copyWith(letterSpacing: 4)),
+                Text(
+                  trip.str('pin'),
+                  style: CaboText.h1.copyWith(letterSpacing: 4),
+                ),
               ],
             ),
           ),
+          if (waitingFee > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Waiting time so far adds ${naira(waitingFee)} to your fare.',
+                style: CaboText.muted.copyWith(color: CaboColors.orange),
+              ),
+            ),
           const SizedBox(height: 14),
           Row(
             children: [
@@ -669,11 +1263,6 @@ class DriverOnTheWayScreen extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          CaboButton(
-            'Driver arrived? Start trip',
-            onPressed: () => replace(context, '/trip-in-progress'),
-          ),
         ],
       ),
     );
@@ -685,138 +1274,50 @@ class ChatWithDriverScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const replies = [
-      "I'm at the entrance",
-      'Wearing a blue shirt',
-      'Coming now',
-    ];
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: Navigator.of(context).canPop()
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-                onPressed: () => back(context),
-              )
-            : null,
-        titleSpacing: 0,
-        centerTitle: false,
-        title: Row(
-          children: [
-            const Avatar('EN', size: 40),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Emeka N.', style: CaboText.h3),
-                Text(
-                  'Silver Corolla • LND 482 KJ',
-                  style: CaboText.muted.copyWith(fontSize: 12),
-                ),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.call_rounded, color: CaboColors.green),
-            onPressed: () {},
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Container(
-            margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: CaboColors.greenSoft,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.lock_rounded,
-                  size: 16,
-                  color: CaboColors.green,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Calls and chats are private. Your number stays hidden.',
-                    style: CaboText.muted.copyWith(fontSize: 12),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: const [
-                ChatBubble(
-                  "Good morning, I'm 2 minutes away.",
-                  mine: false,
-                  time: '08:58',
-                ),
-                ChatBubble(
-                  "Great, I'm by the fountain at the main entrance.",
-                  mine: true,
-                  time: '08:59',
-                ),
-                ChatBubble(
-                  'No problem. Silver Corolla, LND 482 KJ.',
-                  mine: false,
-                  time: '09:00',
-                ),
-              ],
-            ),
-          ),
-          SizedBox(
-            height: 44,
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              scrollDirection: Axis.horizontal,
-              itemCount: replies.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (context, i) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  border: Border.all(color: CaboColors.green),
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Text(
-                  replies[i],
-                  style: CaboText.label.copyWith(color: CaboColors.green),
-                ),
-              ),
-            ),
-          ),
-          const SafeArea(
-            top: false,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(16, 10, 16, 12),
-              child: ChatInput(),
-            ),
-          ),
-        ],
+    return StateScreen(
+      icon: Icons.chat_bubble_rounded,
+      title: 'Chat with your driver',
+      message:
+          'In-app chat and private calls are coming soon. For now your driver meets you at the pickup '
+          'point shown in the app, and you can reach Cabo support at any time.',
+      primary: 'Contact support',
+      onPrimary: () => go(context, '/help'),
+      secondary: 'Back',
+      top: IconButton(
+        icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+        onPressed: () => back(context),
       ),
     );
   }
 }
 
-class TripInProgressScreen extends StatelessWidget {
+class TripInProgressScreen extends StatefulWidget {
   const TripInProgressScreen({super.key});
 
   @override
+  State<TripInProgressScreen> createState() => _TripInProgressScreenState();
+}
+
+class _TripInProgressScreenState extends State<TripInProgressScreen>
+    with _TripWatcher {
+  @override
+  String get route => '/trip-in-progress';
+
+  @override
   Widget build(BuildContext context) {
+    final trip = _state.trip;
+    if (trip == null) return noTrip('Your trip');
+    final arrival = (trip.date('started_at') ?? DateTime.now()).add(
+      Duration(minutes: trip.integer('duration_minutes')),
+    );
+    final left = arrival.difference(DateTime.now()).inMinutes;
+    final dest = _short(trip.str('dropoff_address'));
     return MapLayout(
-      map: const CaboMap(
-        route: [Offset(0.62, 0.52), Offset(0.78, 0.6), _dropoff],
+      map: CaboMap(
+        route: const [Offset(0.62, 0.52), Offset(0.78, 0.6), _dropoff],
         markers: [
-          MapMarker(Offset(0.62, 0.52), MarkerKind.driver),
-          MapMarker(_dropoff, MarkerKind.dropoff, label: 'Nike Art Gallery'),
+          const MapMarker(Offset(0.62, 0.52), MarkerKind.driver),
+          MapMarker(_dropoff, MarkerKind.dropoff, label: dest),
         ],
       ),
       top: Row(
@@ -830,7 +1331,12 @@ class TripInProgressScreen extends StatelessWidget {
                 BoxShadow(color: Colors.black12, blurRadius: 10),
               ],
             ),
-            child: Text('Arrive 9:42 • 18 min', style: CaboText.h3),
+            child: Text(
+              left > 0
+                  ? 'Arrive about ${fmtTime(arrival)} • $left min'
+                  : 'Arriving soon',
+              style: CaboText.h3,
+            ),
           ),
           const Spacer(),
           RoundAction(
@@ -846,11 +1352,15 @@ class TripInProgressScreen extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('On the way to Nike Art Gallery', style: CaboText.h2),
+          Text('On the way to $dest', style: CaboText.h2),
           const SizedBox(height: 4),
-          Text('9.2 km left • Comfort • Visa •• 4242', style: CaboText.muted),
+          Text(
+            '${trip.number('distance_km').toStringAsFixed(1)} km • ${trip.obj('ride_type')?.str('name') ?? ''} • '
+            '${naira(trip.integer('fare_total'))} by ${(paymentLabels[trip.str('payment_method')] ?? '').toLowerCase()}',
+            style: CaboText.muted,
+          ),
           const SizedBox(height: 14),
-          const DriverCard(),
+          DriverCard(trip, actions: false),
           const SizedBox(height: 14),
           Row(
             children: [
@@ -858,7 +1368,6 @@ class TripInProgressScreen extends StatelessWidget {
                 (Icons.share_rounded, 'Share', '/share-trip'),
                 (Icons.add_location_alt_rounded, 'Add stop', '/add-stop'),
                 (Icons.shield_rounded, 'Safety', '/safety'),
-                (Icons.flag_rounded, 'Arrived', '/trip-complete'),
               ])
                 Expanded(
                   child: RoundAction(
@@ -877,102 +1386,242 @@ class TripInProgressScreen extends StatelessWidget {
   }
 }
 
+class _ShareData {
+  _ShareData(this.url, this.contacts);
+  final String url;
+  final List<Json> contacts;
+}
+
 class ShareTripScreen extends StatelessWidget {
   const ShareTripScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final state = AppScope.read(context);
+    final api = state.api;
     return CaboScaffold(
       title: 'Share trip',
       children: [
-        CaboCard(
-          color: CaboColors.greenSoft,
-          child: Column(
+        Loader<_ShareData>(
+          load: () async {
+            final trip = state.trip ?? await state.findActiveTrip();
+            if (trip == null)
+              throw ApiException(
+                'You can share a trip once you have a ride in progress.',
+              );
+            final results = await Future.wait([
+              api.post('/rider/trips/${trip.integer('id')}/share'),
+              api.get('/rider/emergency-contacts'),
+            ]);
+            return _ShareData(
+              (unwrap(results[0]) as Json).str('url'),
+              asJsonList(unwrap(results[1])),
+            );
+          },
+          builder: (context, data, reload) => Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Live trip link', style: CaboText.label),
-              const SizedBox(height: 4),
-              Text(
-                'cabo.ng/t/7Q4-2291',
-                style: CaboText.h2.copyWith(color: CaboColors.green),
+              CaboCard(
+                color: CaboColors.greenSoft,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Live trip link', style: CaboText.label),
+                    const SizedBox(height: 4),
+                    SelectableText(
+                      data.url,
+                      style: CaboText.h3.copyWith(color: CaboColors.green),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Shows your driver, car and where they were last seen. Opens in any browser, no app needed.',
+                      style: CaboText.muted,
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                'Shows your driver, car and live location. Opens in any browser, no app needed. '
-                'Expires when the trip ends.',
-                style: CaboText.muted,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: CaboButton(
-                'WhatsApp',
-                icon: Icons.chat_rounded,
-                height: 50,
-                onPressed: () {},
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: CaboButton(
+              const SizedBox(height: 16),
+              CaboButton(
                 'Copy link',
-                style: CaboButtonStyle.secondary,
                 icon: Icons.copy_rounded,
                 height: 50,
-                onPressed: () {},
+                onPressed: () async {
+                  await Clipboard.setData(ClipboardData(text: data.url));
+                  if (context.mounted)
+                    showMessage(
+                      context,
+                      'Link copied. Paste it into WhatsApp, SMS or email.',
+                    );
+                },
               ),
-            ),
-          ],
-        ),
-        const SectionTitle('Trusted contacts'),
-        const ToggleTile('Bisi Bakare', subtitle: 'Mother • +44 7700 900 118'),
-        const ToggleTile(
-          'Kemi Adeyemi',
-          subtitle: 'Friend • +234 802 555 0192',
-          initial: false,
-        ),
-        const SizedBox(height: 8),
-        const ToggleTile(
-          'Share every trip automatically',
-          subtitle: 'With the contacts switched on above',
-          initial: false,
+              SectionTitle(
+                'Trusted contacts',
+                action: 'Manage',
+                onAction: () => go(context, '/trusted-contacts'),
+              ),
+              if (data.contacts.isEmpty)
+                const EmptyNotice(
+                  'Add a trusted contact so Cabo\'s safety team can reach someone for you.',
+                  icon: Icons.group_add_rounded,
+                ),
+              for (final c in data.contacts)
+                ToggleTile(
+                  c.str('name'),
+                  key: ValueKey(c.integer('id')),
+                  subtitle:
+                      '${c.str('relationship')} • ${c.str('phone')}\nShare every trip automatically',
+                  initial: c.flag('share_trips_automatically'),
+                  onChanged: (v) => runAction(
+                    context,
+                    () => api.put(
+                      '/rider/emergency-contacts/${c.integer('id')}',
+                      {
+                        'name': c.str('name'),
+                        'phone': c.str('phone'),
+                        'relationship': c.strOrNull('relationship'),
+                        'share_trips_automatically': v,
+                      },
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ],
     );
   }
 }
 
-class AddStopScreen extends StatelessWidget {
+class AddStopScreen extends StatefulWidget {
   const AddStopScreen({super.key});
 
   @override
+  State<AddStopScreen> createState() => _AddStopScreenState();
+}
+
+class _AddStopScreenState extends State<AddStopScreen> {
+  final _query = TextEditingController();
+  Timer? _debounce;
+  List<Json> _results = [];
+  Json? _chosen;
+  bool _started = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    _run();
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _query.dispose();
+    super.dispose();
+  }
+
+  Future<void> _run() async {
+    try {
+      final list = await AppScope.read(context)
+          .destinations(_query.text.trim());
+      if (mounted) setState(() => _results = list);
+    } on ApiException catch (e) {
+      if (mounted) showMessage(context, e.message, error: true);
+    }
+  }
+
+  Future<void> _add() async {
+    final state = AppScope.read(context);
+    final before = state.trip!.integer('fare_total');
+    final res = await state.api.post(
+      '/rider/trips/${state.trip!.integer('id')}/stops',
+      {
+        'address': _chosen!.str('address'),
+        'lat': _chosen!.number('lat'),
+        'lng': _chosen!.number('lng'),
+      },
+    );
+    final after = (unwrap(res) as Json).integer('fare_total');
+    await state.refreshTrip();
+    if (!mounted) return;
+    showMessage(
+      context,
+      'Stop added. Your fare went from ${naira(before)} to ${naira(after)}.',
+    );
+    back(context);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final state = AppScope.of(context);
+    final trip = state.trip;
+    if (trip == null) {
+      return CaboScaffold(
+        title: 'Add a stop',
+        children: const [
+          EmptyNotice(
+            'You can add a stop during a ride.',
+            icon: Icons.add_location_alt_rounded,
+          ),
+        ],
+      );
+    }
+    final stopFee =
+        state.config.obj('pricing')?.integer('stop_fee', 300) ?? 300;
     return CaboScaffold(
       title: 'Add a stop',
-      bottom: CaboButton(
-        'Add stop • new fare ${naira(3900)}',
-        onPressed: () => back(context),
+      bottom: ActionButton(
+        _chosen == null
+            ? 'Choose a stop'
+            : 'Add ${_short(_chosen!.str('name'))}',
+        enabled: _chosen != null,
+        busyLabel: 'Adding…',
+        onPressed: _add,
       ),
       children: [
-        const _Stop(CaboColors.green, 'PICKUP', 'Eko Hotel main entrance'),
-        const _Stop(CaboColors.blue, 'STOP', 'Shoprite, The Palms Lekki'),
-        const _Stop(CaboColors.red, 'DROP-OFF', 'Nike Art Gallery, Lekki'),
+        _Stop(CaboColors.green, 'PICKUP', trip.str('pickup_address')),
+        for (final s in trip.list('stops'))
+          _Stop(CaboColors.blue, 'STOP', s.str('address')),
+        if (_chosen != null)
+          _Stop(CaboColors.blue, 'NEW STOP', _chosen!.str('address')),
+        _Stop(CaboColors.red, 'DROP-OFF', trip.str('dropoff_address')),
         const SizedBox(height: 14),
-        const SearchBox(value: 'Shoprite'),
+        TextField(
+          controller: _query,
+          onChanged: (_) {
+            _debounce?.cancel();
+            _debounce = Timer(const Duration(milliseconds: 350), _run);
+          },
+          decoration: InputDecoration(
+            hintText: 'Search for a stop',
+            prefixIcon: const Icon(
+              Icons.search_rounded,
+              color: CaboColors.muted,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
         const SizedBox(height: 8),
-        for (final (name, sub) in const [
-          ('Shoprite, The Palms Lekki', 'On your route • +4 min'),
-          ('Shoprite, Ikota', '+12 min'),
-        ])
+        for (final p in _results.take(8))
           MenuTile(
-            icon: Icons.shopping_cart_rounded,
-            title: name,
-            subtitle: sub,
-            onTap: () {},
+            icon: Icons.place_rounded,
+            title: p.str('name'),
+            subtitle: p.str('address'),
+            trailing: _chosen == p
+                ? const Icon(
+                    Icons.check_circle_rounded,
+                    color: CaboColors.green,
+                  )
+                : null,
+            onTap: () => setState(() => _chosen = p),
           ),
         const SizedBox(height: 10),
         CaboCard(
@@ -983,7 +1632,8 @@ class AddStopScreen extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Your fare goes from ${naira(3500)} to ${naira(3900)}. Your driver sees the new route straight away.',
+                  'Each stop adds ${naira(stopFee)} plus the extra distance and time. You see the new fare '
+                  'as soon as the stop is added, and your driver sees the new route. Up to three stops.',
                   style: CaboText.body.copyWith(fontSize: 13),
                 ),
               ),
@@ -1003,40 +1653,66 @@ class ScheduleRideScreen extends StatefulWidget {
 }
 
 class _ScheduleRideScreenState extends State<ScheduleRideScreen> {
-  int day = 2;
-  int time = 3;
+  int day = 0;
+  int? time;
+
+  static const _times = [
+    '05:00',
+    '06:00',
+    '06:30',
+    '07:00',
+    '07:30',
+    '08:00',
+    '08:30',
+    '09:00',
+    '10:00', //
+    '11:00',
+    '12:00',
+    '13:00',
+    '14:00',
+    '15:00',
+    '16:00',
+    '17:00',
+    '18:00',
+    '19:00',
+    '20:00', '21:00', '22:00',
+  ];
+
+  DateTime _at(int dayIndex, String hhmm) {
+    final d = DateTime.now().add(Duration(days: dayIndex));
+    final parts = hhmm.split(':');
+    return DateTime(
+      d.year,
+      d.month,
+      d.day,
+      int.parse(parts[0]),
+      int.parse(parts[1]),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    const days = [
-      ('Fri', '16'),
-      ('Sat', '17'),
-      ('Sun', '18'),
-      ('Mon', '19'),
-      ('Tue', '20'),
-      ('Wed', '21'),
-      ('Thu', '22'),
-    ];
-    const times = [
-      '07:00',
-      '07:30',
-      '08:00',
-      '08:30',
-      '09:00',
-      '09:30',
-      '10:00',
-      '10:30',
-      '11:00',
-    ];
+    final state = AppScope.read(context);
+    final now = DateTime.now();
+    // The server needs at least 15 minutes' notice.
+    final earliest = now.add(const Duration(minutes: 20));
+    final chosen = time == null ? null : _at(day, _times[time!]);
     return CaboScaffold(
       title: 'Schedule a ride',
       bottom: CaboButton(
-        'Schedule for Sun 18 Oct, 08:30',
-        onPressed: () => go(context, '/bookings'),
+        chosen == null
+            ? 'Choose a pickup time'
+            : 'Schedule for ${fmtDayTime(chosen)}',
+        onPressed: chosen == null
+            ? null
+            : () {
+                state.setSchedule(chosen);
+                back(context);
+              },
       ),
       children: [
         Text(
-          'Book up to 7 days ahead. We assign a driver the evening before.',
+          'Book up to 7 days ahead. Choose your destination next and you will see the fixed fare before you confirm.',
           style: CaboText.muted.copyWith(fontSize: 14),
         ),
         const SectionTitle('Day'),
@@ -1044,35 +1720,41 @@ class _ScheduleRideScreenState extends State<ScheduleRideScreen> {
           height: 74,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: days.length,
+            itemCount: 7,
             separatorBuilder: (_, _) => const SizedBox(width: 8),
-            itemBuilder: (context, i) => GestureDetector(
-              onTap: () => setState(() => day = i),
-              child: Container(
-                width: 58,
-                decoration: BoxDecoration(
-                  color: i == day ? CaboColors.green : CaboColors.surface,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      days[i].$1,
-                      style: CaboText.label.copyWith(
-                        color: i == day ? Colors.white70 : CaboColors.muted,
+            itemBuilder: (context, i) {
+              final d = now.add(Duration(days: i));
+              return GestureDetector(
+                onTap: () => setState(() {
+                  day = i;
+                  time = null;
+                }),
+                child: Container(
+                  width: 58,
+                  decoration: BoxDecoration(
+                    color: i == day ? CaboColors.green : CaboColors.surface,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        i == 0 ? 'Today' : weekdayShort(d),
+                        style: CaboText.label.copyWith(
+                          color: i == day ? Colors.white70 : CaboColors.muted,
+                        ),
                       ),
-                    ),
-                    Text(
-                      days[i].$2,
-                      style: CaboText.h2.copyWith(
-                        color: i == day ? Colors.white : CaboColors.ink,
+                      Text(
+                        '${d.day}',
+                        style: CaboText.h2.copyWith(
+                          color: i == day ? Colors.white : CaboColors.ink,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
         const SectionTitle('Pickup time'),
@@ -1084,66 +1766,97 @@ class _ScheduleRideScreenState extends State<ScheduleRideScreen> {
           crossAxisSpacing: 8,
           childAspectRatio: 2.4,
           children: [
-            for (var i = 0; i < times.length; i++)
-              GestureDetector(
-                onTap: () => setState(() => time = i),
-                child: Container(
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: i == time ? CaboColors.green : CaboColors.surface,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    times[i],
-                    style: CaboText.body.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: i == time ? Colors.white : CaboColors.ink,
+            for (var i = 0; i < _times.length; i++)
+              Builder(
+                builder: (context) {
+                  final available = _at(day, _times[i]).isAfter(earliest);
+                  return GestureDetector(
+                    onTap: available ? () => setState(() => time = i) : null,
+                    child: Container(
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: i == time
+                            ? CaboColors.green
+                            : CaboColors.surface,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        _times[i],
+                        style: CaboText.body.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: i == time
+                              ? Colors.white
+                              : available
+                              ? CaboColors.ink
+                              : CaboColors.line,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
           ],
-        ),
-        const SizedBox(height: 18),
-        CaboCard(
-          child: Column(
-            children: [
-              const _Stop(
-                CaboColors.green,
-                'PICKUP',
-                'Eko Hotel main entrance',
-              ),
-              const _Stop(
-                CaboColors.red,
-                'DROP-OFF',
-                'Murtala Muhammed Airport, T2',
-              ),
-              const Divider(height: 18),
-              InfoRow('Comfort • fixed fare', naira(14500), bold: true),
-            ],
-          ),
         ),
       ],
     );
   }
 }
 
-class CancelRideScreen extends StatelessWidget {
+class CancelRideScreen extends StatefulWidget {
   const CancelRideScreen({super.key});
 
   @override
+  State<CancelRideScreen> createState() => _CancelRideScreenState();
+}
+
+class _CancelRideScreenState extends State<CancelRideScreen> {
+  static const _reasons = [
+    ('Driver is taking too long', null),
+    ('I changed my plans', null),
+    ('Wrong pickup location', null),
+    ('I feel unsafe', 'Cabo Safety will follow up with you'),
+    ('Other', null),
+  ];
+  int _reason = 1;
+
+  @override
   Widget build(BuildContext context) {
+    final state = AppScope.read(context);
+    final trip = state.trip;
+    if (trip == null) {
+      return CaboScaffold(
+        title: 'Cancel ride',
+        children: const [
+          EmptyNotice(
+            'You have no ride to cancel.',
+            icon: Icons.local_taxi_rounded,
+          ),
+        ],
+      );
+    }
+    final rules = state.config.obj('cancellation');
+    final freeMinutes = rules?.integer('free_minutes', 2) ?? 2;
+    final fee = rules?.integer('rider_fee', 500) ?? 500;
+    final accepted = trip.date('accepted_at');
+    final free =
+        accepted == null ||
+        (trip.str('status') == 'accepted' &&
+            DateTime.now().difference(accepted).inMinutes < freeMinutes);
     return CaboScaffold(
       title: 'Cancel ride',
       bottom: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CaboButton(
+          ActionButton(
             'Cancel ride',
             style: CaboButtonStyle.danger,
-            onPressed: () =>
-                Navigator.of(context)
-                    .pushNamedAndRemoveUntil('/home', (_) => false),
+            busyLabel: 'Cancelling…',
+            onPressed: () async {
+              final res = await state.cancelTrip(_reasons[_reason].$1);
+              if (!context.mounted) return;
+              showMessage(context, res.str('message', 'Ride cancelled.'));
+              _goHome(context);
+            },
           ),
           const SizedBox(height: 10),
           CaboButton(
@@ -1156,15 +1869,23 @@ class CancelRideScreen extends StatelessWidget {
       ),
       children: [
         CaboCard(
-          color: CaboColors.yellowSoft,
+          color: free ? CaboColors.greenSoft : CaboColors.yellowSoft,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.warning_amber_rounded, color: CaboColors.orange),
+              Icon(
+                free
+                    ? Icons.check_circle_outline_rounded
+                    : Icons.warning_amber_rounded,
+                color: free ? CaboColors.green : CaboColors.orange,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Free cancellation ended 1 minute ago. A ${naira(500)} fee goes to your driver for their time.',
+                  free
+                      ? 'You can cancel for free right now. After your driver has been on the way for '
+                            '$freeMinutes minutes, a ${naira(fee)} fee applies.'
+                      : 'Free cancellation has ended. A ${naira(fee)} fee goes to your driver for their time.',
                   style: CaboText.body.copyWith(fontSize: 13),
                 ),
               ),
@@ -1172,20 +1893,18 @@ class CancelRideScreen extends StatelessWidget {
           ),
         ),
         const SectionTitle('Why are you cancelling?'),
-        const SingleChoice(
-          initial: 1,
-          options: [
-            ('Driver is taking too long', null),
-            ('I changed my plans', null),
-            ('Wrong pickup location', null),
-            ('I feel unsafe', 'Cabo Safety will follow up with you'),
-            ('Other', null),
-          ],
+        SingleChoice(
+          initial: _reason,
+          onChanged: (i) => _reason = i,
+          options: _reasons,
         ),
       ],
     );
   }
 }
+
+/// Tip chosen on the trip-complete screen, sent with the rating.
+int _pendingTip = 0;
 
 class TripCompleteScreen extends StatefulWidget {
   const TripCompleteScreen({super.key});
@@ -1195,106 +1914,148 @@ class TripCompleteScreen extends StatefulWidget {
 }
 
 class _TripCompleteScreenState extends State<TripCompleteScreen> {
-  int tip = 2;
+  static const tips = [0, 200, 500, 1000];
+  int tip = 0;
 
   @override
   Widget build(BuildContext context) {
-    const tips = [0, 200, 500, 1000];
-    return CaboScaffold(
-      title: 'Trip complete',
-      showBack: false,
-      bottom: CaboButton(
-        'Pay & rate Emeka',
-        onPressed: () => go(context, '/rate-driver'),
-      ),
-      children: [
-        const SizedBox(height: 8),
-        const Center(
-          child: CircleAvatar(
-            radius: 36,
-            backgroundColor: CaboColors.greenSoft,
-            child: Icon(Icons.check_rounded, size: 44, color: CaboColors.green),
+    final state = AppScope.read(context);
+    return Loader<Json>(
+      load: () async {
+        if (state.trip == null)
+          throw ApiException('There is no finished ride to show.');
+        // Fetch the final fare, which can include waiting time.
+        await state.refreshTrip();
+        return state.trip!;
+      },
+      builder: (context, trip, _) {
+        final fare = trip.integer('fare_total');
+        final driver =
+            trip.obj('driver')?.str('first_name', 'your driver') ??
+            'your driver';
+        final method = paymentLabels[trip.str('payment_method')] ?? 'Card';
+        final home = state.homePrice(fare + tips[tip]);
+        final email = state.rider?.strOrNull('email');
+        return CaboScaffold(
+          title: 'Trip complete',
+          showBack: false,
+          bottom: CaboButton(
+            'Rate $driver',
+            onPressed: () {
+              _pendingTip = tips[tip];
+              go(context, '/rate-driver');
+            },
           ),
-        ),
-        const SizedBox(height: 10),
-        Center(
-          child: Text(
-            "You've arrived at Nike Art Gallery",
-            style: CaboText.h2,
-            textAlign: TextAlign.center,
-          ),
-        ),
-        Center(child: Text('14.6 km • 34 min', style: CaboText.muted)),
-        const SizedBox(height: 18),
-        CaboCard(
-          child: Column(
-            children: [
-              InfoRow('Trip fare', naira(3500)),
-              InfoRow(
-                'Tip for Emeka',
-                naira(tips[tip]),
-                valueColor: CaboColors.green,
-              ),
-              const Divider(height: 20),
-              InfoRow(
-                'Total (Visa •• 4242)',
-                naira(3500 + tips[tip]),
-                bold: true,
-              ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Text(gbp(3500 + tips[tip]), style: CaboText.label),
-              ),
-            ],
-          ),
-        ),
-        const SectionTitle('Add a tip'),
-        Row(
           children: [
-            for (var i = 0; i < tips.length; i++)
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: GestureDetector(
-                    onTap: () => setState(() => tip = i),
-                    child: Container(
-                      height: 48,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: i == tip ? CaboColors.green : CaboColors.surface,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Text(
-                        i == 0 ? 'No tip' : naira(tips[i]),
-                        style: CaboText.body.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: i == tip ? Colors.white : CaboColors.ink,
+            const SizedBox(height: 8),
+            const Center(
+              child: CircleAvatar(
+                radius: 36,
+                backgroundColor: CaboColors.greenSoft,
+                child: Icon(
+                  Icons.check_rounded,
+                  size: 44,
+                  color: CaboColors.green,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Center(
+              child: Text(
+                "You've arrived at ${_short(trip.str('dropoff_address'))}",
+                style: CaboText.h2,
+                textAlign: TextAlign.center,
+              ),
+            ),
+            Center(
+              child: Text(
+                '${trip.number('distance_km').toStringAsFixed(1)} km • ${trip.integer('duration_minutes')} min',
+                style: CaboText.muted,
+              ),
+            ),
+            const SizedBox(height: 18),
+            CaboCard(
+              child: Column(
+                children: [
+                  InfoRow('Trip fare', naira(fare)),
+                  InfoRow(
+                    'Tip for $driver',
+                    naira(tips[tip]),
+                    valueColor: CaboColors.green,
+                  ),
+                  const Divider(height: 20),
+                  InfoRow(
+                    'Total ($method)',
+                    naira(fare + tips[tip]),
+                    bold: true,
+                  ),
+                  if (home.isNotEmpty)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(home, style: CaboText.label),
+                    ),
+                ],
+              ),
+            ),
+            if (trip.str('payment_method') == 'cash')
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Text(
+                  'Pay ${naira(fare)} in cash to your driver. A tip added here is charged to your card.',
+                  style: CaboText.muted,
+                ),
+              ),
+            const SectionTitle('Add a tip'),
+            Row(
+              children: [
+                for (var i = 0; i < tips.length; i++)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: GestureDetector(
+                        onTap: () => setState(() => tip = i),
+                        child: Container(
+                          height: 48,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: i == tip
+                                ? CaboColors.green
+                                : CaboColors.surface,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Text(
+                            i == 0 ? 'No tip' : naira(tips[i]),
+                            style: CaboText.body.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: i == tip ? Colors.white : CaboColors.ink,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Icon(
+                  Icons.receipt_long_rounded,
+                  size: 18,
+                  color: CaboColors.muted,
                 ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            const Icon(
-              Icons.mail_outline_rounded,
-              size: 18,
-              color: CaboColors.muted,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Receipt sent to tunde.bakare@gmail.com',
-                style: CaboText.muted,
-              ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    email == null ? 'Your receipt is under Bookings.' : 'Your receipt is under Bookings. Add-ons such as tips appear there too.',
+                    style: CaboText.muted,
+                  ),
+                ),
+              ],
             ),
           ],
-        ),
-      ],
+        );
+      },
     );
   }
 }
@@ -1307,24 +2068,92 @@ class RateDriverScreen extends StatefulWidget {
 }
 
 class _RateDriverScreenState extends State<RateDriverScreen> {
+  static const _labels = [
+    '',
+    'Poor',
+    'Below average',
+    'OK',
+    'Good',
+    'Excellent',
+  ];
+  static const _tags = [
+    'Safe driving',
+    'Clean car',
+    'Knows Lagos',
+    'Friendly',
+    'Great music',
+    'On time',
+  ];
+  final _note = TextEditingController();
   int stars = 5;
+  Set<int> _picked = {};
+
+  @override
+  void dispose() {
+    _note.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final state = AppScope.read(context);
+    final feedback = [
+      for (final i in _picked.toList()..sort()) _tags[i],
+      if (_note.text.trim().isNotEmpty) _note.text.trim(),
+    ].join('. ');
+    await state.api.post('/rider/trips/${state.trip!.integer('id')}/rating', {
+      'rating': stars,
+      if (feedback.isNotEmpty)
+        'feedback': feedback.length > 255
+            ? feedback.substring(0, 255)
+            : feedback,
+      'tip': _pendingTip,
+    });
+    _pendingTip = 0;
+    state.trip = null;
+    unawaited(state.refreshRider().catchError((_) {}));
+    if (!mounted) return;
+    showMessage(context, 'Thanks for your feedback.');
+    _goHome(context);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final trip = AppScope.read(context).trip;
+    if (trip == null) {
+      return CaboScaffold(
+        title: 'Rate your driver',
+        children: const [
+          EmptyNotice(
+            'There is no finished ride to rate.',
+            icon: Icons.star_outline_rounded,
+          ),
+        ],
+      );
+    }
+    final driver = trip.obj('driver');
+    final name = driver?.str('first_name', 'your driver') ?? 'your driver';
     return CaboScaffold(
       title: 'Rate your driver',
-      bottom: CaboButton(
-        'Submit',
-        onPressed: () =>
-            Navigator.of(context)
-                .pushNamedAndRemoveUntil('/home', (_) => false),
+      bottom: ActionButton(
+        _pendingTip > 0 ? 'Submit and tip ${naira(_pendingTip)}' : 'Submit',
+        busyLabel: 'Sending…',
+        onPressed: _submit,
       ),
       children: [
         const SizedBox(height: 16),
-        const Center(child: Avatar('EN', size: 96)),
+        Center(
+          child: Avatar(
+            initials('$name ${driver?.str('last_name') ?? ''}'),
+            size: 96,
+          ),
+        ),
         const SizedBox(height: 12),
         Center(
-          child: Text('How was your ride with Emeka?', style: CaboText.h2),
+          child: Text(
+            'How was your ride with $name?',
+            style: CaboText.h2,
+            textAlign: TextAlign.center,
+          ),
         ),
         const SizedBox(height: 14),
         Row(
@@ -1333,6 +2162,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
             for (var i = 1; i <= 5; i++)
               IconButton(
                 iconSize: 46,
+                tooltip: '$i ${i == 1 ? 'star' : 'stars'}',
                 onPressed: () => setState(() => stars = i),
                 icon: Icon(
                   i <= stars ? Icons.star_rounded : Icons.star_outline_rounded,
@@ -1343,25 +2173,16 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
         ),
         Center(
           child: Text(
-            'Excellent',
+            _labels[stars],
             style: CaboText.h3.copyWith(color: CaboColors.green),
           ),
         ),
         const SectionTitle('What stood out?'),
-        const ChipPicker(
-          options: [
-            'Safe driving',
-            'Clean car',
-            'Knows Lagos',
-            'Friendly',
-            'Great music',
-            'On time',
-          ],
-          initial: {0, 2, 5},
-        ),
+        ChipPicker(options: _tags, onChanged: (s) => _picked = s),
         const SizedBox(height: 18),
-        const CaboField(
+        CaboField(
           'Anything else? (optional)',
+          controller: _note,
           hint: 'Tell us about your trip',
           maxLines: 3,
         ),

@@ -49,4 +49,32 @@ class AuthTest extends TestCase
     {
         $this->getJson('/api/v1/rider/trips')->assertUnauthorized();
     }
+
+    public function test_demo_code_also_works_in_production_when_set(): void
+    {
+        $this->app['env'] = 'production';
+        config(['cabo.demo_otp' => '123456']);
+
+        $this->postJson('/api/v1/rider/auth/otp', ['identifier' => '+2348031239999'])->assertOk()->assertJsonPath('debug_code', '123456');
+        $this->postJson('/api/v1/rider/auth/verify', ['identifier' => '+2348031239999', 'code' => '123456'])->assertCreated();
+    }
+
+    public function test_without_a_demo_code_codes_are_random_and_emailed(): void
+    {
+        \Illuminate\Support\Facades\Mail::fake();
+        config(['cabo.demo_otp' => null]);
+
+        $this->postJson('/api/v1/rider/auth/otp', ['identifier' => 'guest@example.com'])->assertOk()->assertJsonMissingPath('debug_code');
+        $this->postJson('/api/v1/rider/auth/verify', ['identifier' => 'guest@example.com', 'code' => '123456'])->assertUnprocessable();
+    }
+
+    public function test_places_search_and_host_performance(): void
+    {
+        $this->getJson('/api/v1/places?q=nike')->assertOk()->assertJsonPath('data.0.name', 'Nike Art Gallery')->assertJsonPath('data.0.kind', 'attraction');
+        $this->assertGreaterThan(10, count($this->getJson('/api/v1/places')->json('data')));
+
+        \Laravel\Sanctum\Sanctum::actingAs(\App\Models\Driver::where('phone', '+2348012345678')->first(), ['driver']);
+        $this->getJson('/api/v1/driver/performance')->assertOk()
+            ->assertJsonStructure(['data' => ['rating', 'rating_breakdown' => ['5', '1'], 'acceptance_rate', 'completed_trips', 'tier']]);
+    }
 }

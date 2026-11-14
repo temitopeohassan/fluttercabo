@@ -31,7 +31,8 @@ class AuthController extends Controller
             'identifier' => $identifier,
             'channel' => $channel,
             'expires_in' => OtpService::TTL_MINUTES * 60,
-            'debug_code' => app()->environment('production') ? null : $code,
+            // Only present in demo mode (CABO_DEMO_OTP), so the apps can show the code.
+            'debug_code' => OtpService::demoCode(),
         ]));
     }
 

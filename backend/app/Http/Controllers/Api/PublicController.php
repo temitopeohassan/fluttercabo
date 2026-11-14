@@ -37,6 +37,13 @@ class PublicController extends Controller
                 'rider_fee' => (int) $settings('rider_cancellation_fee', 500),
                 'tour_free_hours' => (int) $settings('tour_free_cancellation_hours', 24),
             ],
+            'pricing' => [
+                'stop_fee' => (int) $settings('stop_fee', 300),
+            ],
+            'tours' => [
+                'ride_addon_price' => (int) $settings('tour_ride_addon_price', 4000),
+                'free_cancellation_hours' => (int) $settings('tour_free_cancellation_hours', 24),
+            ],
             'drivers' => [
                 'commission_rate' => (float) $settings('commission_rate', 20),
                 'cash_debt_limit' => (int) $settings('cash_debt_limit', 20000),
@@ -49,7 +56,7 @@ class PublicController extends Controller
                 'emergency_number' => $settings('emergency_number', '112'),
             ],
             'service_areas' => Zone::where('is_active', true)->where('is_service_area', true)
-                ->get(['name', 'center_lat', 'center_lng', 'radius_km']),
+                ->get(['name', 'center_lat', 'center_lng', 'radius_km', 'surge_multiplier']),
             'ride_types' => RideType::where('is_active', true)->orderBy('sort_order')->get(),
         ]]);
     }
@@ -129,6 +136,43 @@ class PublicController extends Controller
         abort_unless($attraction->is_published, 404);
 
         return response()->json(['data' => $attraction]);
+    }
+
+    /**
+     * Places a guest can choose as a pickup or destination: attractions, tour
+     * meeting points, service areas and the airport. This stands in for a maps
+     * provider's address search until one is connected.
+     */
+    public function places(Request $request): JsonResponse
+    {
+        $request->validate(['q' => 'nullable|string|max:100', 'kind' => 'nullable|string|max:60']);
+        $place = fn (string $name, ?string $address, $lat, $lng, string $kind) => [
+            'name' => $name, 'address' => $address ?: $name, 'lat' => (float) $lat, 'lng' => (float) $lng, 'kind' => $kind,
+        ];
+
+        $places = collect([
+            $place('Murtala Muhammed International Airport (LOS)', 'International terminal, Ikeja', 6.5774, 3.3212, 'airport'),
+            $place('Murtala Muhammed Airport Terminal 2 (MMA2)', 'Domestic terminal, Ikeja', 6.5810, 3.3290, 'airport'),
+        ])
+            ->concat(Attraction::where('is_published', true)->get()
+                ->map(fn ($a) => $place($a->name, $a->address ? "{$a->address}, {$a->area}" : $a->area, $a->lat, $a->lng, 'attraction')))
+            ->concat(Tour::where('is_published', true)->whereNotNull('meeting_lat')->get()
+                ->map(fn ($t) => $place($t->meeting_point, "Meeting point for {$t->title}", $t->meeting_lat, $t->meeting_lng, 'meeting_point')))
+            ->concat(Zone::where('is_active', true)->where('is_service_area', true)->get()
+                ->map(fn ($z) => $place($z->name, "{$z->name}, Lagos", $z->center_lat, $z->center_lng, 'area')))
+            ->unique(fn ($p) => strtolower($p['name']))
+            ->values();
+
+        // ?kind=attraction returns only tourism locations, the places a ride can go to.
+        if ($kinds = array_filter(explode(',', (string) $request->kind))) {
+            $places = $places->filter(fn ($p) => in_array($p['kind'], $kinds, true))->values();
+        }
+
+        if ($q = trim((string) $request->q)) {
+            $places = $places->filter(fn ($p) => stripos($p['name'], $q) !== false || stripos($p['address'], $q) !== false)->values();
+        }
+
+        return response()->json(['data' => $places->take(30)->values()]);
     }
 
     /** The website's "Join the waitlist" form posts here. */

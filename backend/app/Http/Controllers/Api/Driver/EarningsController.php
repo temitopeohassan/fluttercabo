@@ -91,4 +91,28 @@ class EarningsController extends Controller
 
         return response()->json(['data' => $payout, 'balance' => $driver->fresh()->earnings_balance], 201);
     }
+
+    /** Ratings, acceptance and cancellation for the Host app's performance screens. */
+    public function performance(Request $request): JsonResponse
+    {
+        $driver = $request->user();
+        $rated = $driver->trips()->whereNotNull('driver_rating');
+        $counts = (clone $rated)->selectRaw('driver_rating as stars, count(*) as total')->groupBy('driver_rating')->pluck('total', 'stars');
+
+        return response()->json(['data' => [
+            'rating' => $driver->rating,
+            'ratings_count' => (int) $counts->sum(),
+            'rating_breakdown' => collect([5, 4, 3, 2, 1])->mapWithKeys(fn ($s) => [$s => (int) ($counts[$s] ?? 0)]),
+            'recent_feedback' => (clone $rated)->whereNotNull('driver_feedback')->latest('completed_at')->limit(10)
+                ->get(['id', 'reference', 'driver_rating', 'driver_feedback', 'completed_at']),
+            'acceptance_rate' => $driver->acceptance_rate,
+            'cancellation_rate' => $driver->cancellation_rate,
+            'completed_trips' => $driver->trips()->where('status', 'completed')->count(),
+            'completed_trips_30_days' => $driver->trips()->where('status', 'completed')->where('completed_at', '>=', now()->subDays(30))->count(),
+            'tier' => $driver->tier,
+            'is_tour_guide' => $driver->is_tour_guide,
+            'training_completed' => $driver->training_completed,
+            'member_since' => $driver->approved_at ?? $driver->created_at,
+        ]]);
+    }
 }

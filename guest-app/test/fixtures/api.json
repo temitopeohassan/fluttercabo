@@ -1,0 +1,3423 @@
+{
+ "POST /rider/auth/otp": {
+  "message": "We emailed a 6-digit code to oliver.hughes@example.co.uk.",
+  "identifier": "oliver.hughes@example.co.uk",
+  "channel": "email",
+  "expires_in": 600,
+  "debug_code": "123456"
+ },
+ "POST /rider/auth/verify": {
+  "token": "test-token",
+  "token_type": "Bearer",
+  "is_new": false,
+  "rider": {
+   "id": 8,
+   "first_name": "Oliver",
+   "last_name": "Hughes",
+   "email": "oliver.hughes@example.co.uk",
+   "phone": "+447700900456",
+   "photo_url": null,
+   "nationality": "British",
+   "home_currency": "GBP",
+   "traveller_type": "international",
+   "language": "en",
+   "accessibility": null,
+   "wallet_balance": 40000,
+   "loyalty_points": 950,
+   "referral_code": "OLIV0008",
+   "referred_by_id": null,
+   "status": "active",
+   "rating": 4.75,
+   "last_active_at": "2026-11-14T13:55:19.000000Z",
+   "created_at": "2026-10-06T09:47:03.000000Z",
+   "updated_at": "2026-11-14T13:55:19.000000Z",
+   "deleted_at": null,
+   "name": "Oliver Hughes"
+  }
+ },
+ "GET /config": {
+  "data": {
+   "currency": "NGN",
+   "exchange_rates": {
+    "GBP": 2000,
+    "USD": 1550,
+    "EUR": 1700
+   },
+   "waiting": {
+    "free_minutes": 5,
+    "fee_per_minute": 50,
+    "airport_free_minutes": 60
+   },
+   "cancellation": {
+    "free_minutes": 2,
+    "rider_fee": 500,
+    "tour_free_hours": 24
+   },
+   "pricing": {
+    "stop_fee": 300
+   },
+   "tours": {
+    "ride_addon_price": 4000,
+    "free_cancellation_hours": 24
+   },
+   "drivers": {
+    "commission_rate": 20,
+    "cash_debt_limit": 20000,
+    "instant_cashout_fee_percent": 1.5,
+    "minimum_cashout": 5000
+   },
+   "support": {
+    "phone": "+234 201 330 2226",
+    "email": "help@caboapp.online",
+    "emergency_number": "112"
+   },
+   "service_areas": [
+    {
+     "name": "Victoria Island",
+     "center_lat": 6.4281,
+     "center_lng": 3.4219,
+     "radius_km": 3,
+     "surge_multiplier": 1.2
+    },
+    {
+     "name": "Ikoyi",
+     "center_lat": 6.4549,
+     "center_lng": 3.4346,
+     "radius_km": 3,
+     "surge_multiplier": 1
+    },
+    {
+     "name": "Lekki",
+     "center_lat": 6.4474,
+     "center_lng": 3.4728,
+     "radius_km": 6,
+     "surge_multiplier": 1
+    },
+    {
+     "name": "Yaba",
+     "center_lat": 6.5095,
+     "center_lng": 3.3711,
+     "radius_km": 3,
+     "surge_multiplier": 1
+    },
+    {
+     "name": "Surulere",
+     "center_lat": 6.4969,
+     "center_lng": 3.3481,
+     "radius_km": 3.5,
+     "surge_multiplier": 1
+    },
+    {
+     "name": "Murtala Muhammed Airport",
+     "center_lat": 6.5774,
+     "center_lng": 3.3212,
+     "radius_km": 2.5,
+     "surge_multiplier": 1
+    }
+   ],
+   "ride_types": [
+    {
+     "id": 1,
+     "code": "economy",
+     "name": "Economy",
+     "description": "Affordable everyday rides",
+     "seats": 4,
+     "base_fare": 700,
+     "per_km": 120,
+     "per_minute": 20,
+     "minimum_fare": 1500,
+     "sort_order": 1,
+     "is_active": true,
+     "created_at": "2026-11-14T09:47:03.000000Z",
+     "updated_at": "2026-11-14T09:47:03.000000Z"
+    },
+    {
+     "id": 2,
+     "code": "comfort",
+     "name": "Comfort",
+     "description": "Newer cars with extra legroom",
+     "seats": 4,
+     "base_fare": 1000,
+     "per_km": 170,
+     "per_minute": 28,
+     "minimum_fare": 2200,
+     "sort_order": 2,
+     "is_active": true,
+     "created_at": "2026-11-14T09:47:03.000000Z",
+     "updated_at": "2026-11-14T09:47:03.000000Z"
+    },
+    {
+     "id": 3,
+     "code": "suv",
+     "name": "SUV",
+     "description": "Room for six and their luggage",
+     "seats": 6,
+     "base_fare": 1500,
+     "per_km": 240,
+     "per_minute": 38,
+     "minimum_fare": 3200,
+     "sort_order": 3,
+     "is_active": true,
+     "created_at": "2026-11-14T09:47:03.000000Z",
+     "updated_at": "2026-11-14T09:47:03.000000Z"
+    },
+    {
+     "id": 4,
+     "code": "premium",
+     "name": "Premium",
+     "description": "Top-rated drivers in executive cars",
+     "seats": 4,
+     "base_fare": 2200,
+     "per_km": 360,
+     "per_minute": 55,
+     "minimum_fare": 4800,
+     "sort_order": 4,
+     "is_active": true,
+     "created_at": "2026-11-14T09:47:03.000000Z",
+     "updated_at": "2026-11-14T09:47:03.000000Z"
+    }
+   ]
+  }
+ },
+ "GET /places": {
+  "data": [
+   {
+    "name": "Murtala Muhammed International Airport (LOS)",
+    "address": "International terminal, Ikeja",
+    "lat": 6.5774,
+    "lng": 3.3212,
+    "kind": "airport"
+   },
+   {
+    "name": "Murtala Muhammed Airport Terminal 2 (MMA2)",
+    "address": "Domestic terminal, Ikeja",
+    "lat": 6.581,
+    "lng": 3.329,
+    "kind": "airport"
+   },
+   {
+    "name": "Lekki Conservation Centre",
+    "address": "Km 19 Lekki–Epe Expressway, Lekki",
+    "lat": 6.4413,
+    "lng": 3.5357,
+    "kind": "attraction"
+   },
+   {
+    "name": "Nike Art Gallery",
+    "address": "2 Elegushi Road, Lekki Phase 1, Lekki",
+    "lat": 6.4371,
+    "lng": 3.4848,
+    "kind": "attraction"
+   },
+   {
+    "name": "Tarkwa Bay Beach",
+    "address": "Tarkwa Bay, reached by boat from Tarzan Jetty, Lagos Harbour",
+    "lat": 6.4011,
+    "lng": 3.3963,
+    "kind": "attraction"
+   },
+   {
+    "name": "Freedom Park",
+    "address": "Broad Street, Lagos Island, Lagos Island",
+    "lat": 6.4527,
+    "lng": 3.3937,
+    "kind": "attraction"
+   },
+   {
+    "name": "Lekki–Ikoyi Link Bridge",
+    "address": "Lekki–Ikoyi Link Bridge, Ikoyi",
+    "lat": 6.4449,
+    "lng": 3.4395,
+    "kind": "attraction"
+   },
+   {
+    "name": "Elegushi Beach",
+    "address": "Elegushi Royal Beach, Lekki Phase 1, Lekki",
+    "lat": 6.4322,
+    "lng": 3.493,
+    "kind": "attraction"
+   },
+   {
+    "name": "Kalakuta Republic Museum",
+    "address": "7 Gbemisola Street, Ikeja, Ikeja",
+    "lat": 6.5915,
+    "lng": 3.3517,
+    "kind": "attraction"
+   },
+   {
+    "name": "Terra Kulture",
+    "address": "1376 Tiamiyu Savage Street, Victoria Island, Victoria Island",
+    "lat": 6.4335,
+    "lng": 3.4229,
+    "kind": "attraction"
+   },
+   {
+    "name": "Lekki Conservation Centre main gate, Km 19 Lekki–Epe Expressway",
+    "address": "Meeting point for Lekki Conservation Centre",
+    "lat": 6.4413,
+    "lng": 3.5357,
+    "kind": "meeting_point"
+   },
+   {
+    "name": "Tarzan Jetty, Maroko Road, Victoria Island",
+    "address": "Meeting point for Tarkwa Bay Boat Trip",
+    "lat": 6.4268,
+    "lng": 3.4291,
+    "kind": "meeting_point"
+   },
+   {
+    "name": "Freedom Park, Broad Street, Lagos Island",
+    "address": "Meeting point for Lagos Island Heritage Walk",
+    "lat": 6.4527,
+    "lng": 3.3937,
+    "kind": "meeting_point"
+   },
+   {
+    "name": "National Stadium main gate, Surulere",
+    "address": "Meeting point for Lagos Street Food Tour",
+    "lat": 6.4997,
+    "lng": 3.3647,
+    "kind": "meeting_point"
+   },
+   {
+    "name": "Eko Hotel roundabout, Victoria Island",
+    "address": "Meeting point for Victoria Island Nightlife",
+    "lat": 6.4268,
+    "lng": 3.429,
+    "kind": "meeting_point"
+   },
+   {
+    "name": "Nike Art Gallery, 2 Elegushi Road, Lekki Phase 1",
+    "address": "Meeting point for Nike Art Gallery Visit",
+    "lat": 6.4371,
+    "lng": 3.4848,
+    "kind": "meeting_point"
+   },
+   {
+    "name": "Victoria Island",
+    "address": "Victoria Island, Lagos",
+    "lat": 6.4281,
+    "lng": 3.4219,
+    "kind": "area"
+   },
+   {
+    "name": "Ikoyi",
+    "address": "Ikoyi, Lagos",
+    "lat": 6.4549,
+    "lng": 3.4346,
+    "kind": "area"
+   },
+   {
+    "name": "Lekki",
+    "address": "Lekki, Lagos",
+    "lat": 6.4474,
+    "lng": 3.4728,
+    "kind": "area"
+   },
+   {
+    "name": "Yaba",
+    "address": "Yaba, Lagos",
+    "lat": 6.5095,
+    "lng": 3.3711,
+    "kind": "area"
+   },
+   {
+    "name": "Surulere",
+    "address": "Surulere, Lagos",
+    "lat": 6.4969,
+    "lng": 3.3481,
+    "kind": "area"
+   },
+   {
+    "name": "Murtala Muhammed Airport",
+    "address": "Murtala Muhammed Airport, Lagos",
+    "lat": 6.5774,
+    "lng": 3.3212,
+    "kind": "area"
+   }
+  ]
+ },
+ "GET /attractions": {
+  "data": [
+   {
+    "id": 5,
+    "name": "Lekki–Ikoyi Link Bridge",
+    "slug": "lekki-ikoyi-link-bridge",
+    "category": "Landmarks",
+    "area": "Ikoyi",
+    "description": "A cable-stayed toll bridge linking Ikoyi and Lekki, best seen at sunset when it is lit up.",
+    "address": "Lekki–Ikoyi Link Bridge",
+    "lat": 6.4449,
+    "lng": 3.4395,
+    "opening_hours": "Open daily",
+    "entry_fee": 0,
+    "visitor_tips": [
+     "Pedestrians can walk the bridge early in the morning",
+     "Sunset photos are best from the Ikoyi end"
+    ],
+    "safety_notes": "Do not stop vehicles on the bridge.",
+    "image_url": "/images/places/lekki-ikoyi-bridge.jpg",
+    "rating": 4.6,
+    "reviews_count": 3100,
+    "is_published": true,
+    "last_reviewed_on": "2026-10-24T00:00:00.000000Z",
+    "created_at": "2026-11-14T09:47:03.000000Z",
+    "updated_at": "2026-11-14T09:47:03.000000Z",
+    "image": "http://127.0.0.1:8000/images/places/lekki-ikoyi-bridge.jpg"
+   },
+   {
+    "id": 1,
+    "name": "Lekki Conservation Centre",
+    "slug": "lekki-conservation-centre",
+    "category": "Nature",
+    "area": "Lekki",
+    "description": "A 78-hectare nature reserve with the longest canopy walkway in Africa, monkeys, crocodiles and wetland birds.",
+    "address": "Km 19 Lekki–Epe Expressway",
+    "lat": 6.4413,
+    "lng": 3.5357,
+    "opening_hours": "8:00 – 17:00",
+    "entry_fee": 3000,
+    "visitor_tips": [
+     "Arrive before 10:00 to beat the heat",
+     "The canopy walkway costs extra and closes at 16:00",
+     "Wear trainers, the boardwalk can be slippery"
+    ],
+    "safety_notes": "Stay on the marked boardwalks. Do not feed the monkeys.",
+    "image_url": "/images/places/lekki-conservation-centre.jpg",
+    "rating": 4.8,
+    "reviews_count": 2300,
+    "is_published": true,
+    "last_reviewed_on": "2026-10-24T00:00:00.000000Z",
+    "created_at": "2026-11-14T09:47:03.000000Z",
+    "updated_at": "2026-11-14T09:47:03.000000Z",
+    "image": "http://127.0.0.1:8000/images/places/lekki-conservation-centre.jpg"
+   },
+   {
+    "id": 2,
+    "name": "Nike Art Gallery",
+    "slug": "nike-art-gallery",
+    "category": "Art",
+    "area": "Lekki",
+    "description": "One of the largest art galleries in West Africa, with over 8,000 works across five floors.",
+    "address": "2 Elegushi Road, Lekki Phase 1",
+    "lat": 6.4371,
+    "lng": 3.4848,
+    "opening_hours": "10:00 – 18:00",
+    "entry_fee": 0,
+    "visitor_tips": [
+     "Entry is free, but prices for artworks are negotiable",
+     "Ask about the adire textile workshop"
+    ],
+    "safety_notes": "Keep bags closed in busy rooms.",
+    "image_url": "/images/places/nike-art-gallery.jpg",
+    "rating": 4.7,
+    "reviews_count": 1800,
+    "is_published": true,
+    "last_reviewed_on": "2026-10-24T00:00:00.000000Z",
+    "created_at": "2026-11-14T09:47:03.000000Z",
+    "updated_at": "2026-11-14T09:47:03.000000Z",
+    "image": "http://127.0.0.1:8000/images/places/nike-art-gallery.jpg"
+   },
+   {
+    "id": 6,
+    "name": "Elegushi Beach",
+    "slug": "elegushi-beach",
+    "category": "Beaches",
+    "area": "Lekki",
+    "description": "A private beach with music, food stalls, horse rides and a lively crowd at weekends.",
+    "address": "Elegushi Royal Beach, Lekki Phase 1",
+    "lat": 6.4322,
+    "lng": 3.493,
+    "opening_hours": "9:00 – 19:00",
+    "entry_fee": 2000,
+    "visitor_tips": [
+     "Busiest on Sunday afternoons",
+     "Agree prices for chairs and horse rides first"
+    ],
+    "safety_notes": "Strong currents: do not swim far from the shore.",
+    "image_url": null,
+    "rating": 4.2,
+    "reviews_count": 1500,
+    "is_published": true,
+    "last_reviewed_on": "2026-10-24T00:00:00.000000Z",
+    "created_at": "2026-11-14T09:47:03.000000Z",
+    "updated_at": "2026-11-14T09:47:03.000000Z",
+    "image": null
+   },
+   {
+    "id": 3,
+    "name": "Tarkwa Bay Beach",
+    "slug": "tarkwa-bay-beach",
+    "category": "Beaches",
+    "area": "Lagos Harbour",
+    "description": "A sheltered beach across the harbour, popular for swimming and surfing, reached only by boat.",
+    "address": "Tarkwa Bay, reached by boat from Tarzan Jetty",
+    "lat": 6.4011,
+    "lng": 3.3963,
+    "opening_hours": "Open daily",
+    "entry_fee": 2000,
+    "visitor_tips": [
+     "Boats leave from Tarzan Jetty in Victoria Island",
+     "Bring cash for chairs and food",
+     "Head back before 17:00"
+    ],
+    "safety_notes": "Always wear a life jacket on the boat. Swim only where locals swim.",
+    "image_url": "/images/places/tarkwa-bay.jpg",
+    "rating": 4.6,
+    "reviews_count": 1100,
+    "is_published": true,
+    "last_reviewed_on": "2026-10-24T00:00:00.000000Z",
+    "created_at": "2026-11-14T09:47:03.000000Z",
+    "updated_at": "2026-11-14T09:47:03.000000Z",
+    "image": "http://127.0.0.1:8000/images/places/tarkwa-bay.jpg"
+   },
+   {
+    "id": 4,
+    "name": "Freedom Park",
+    "slug": "freedom-park",
+    "category": "History",
+    "area": "Lagos Island",
+    "description": "A memorial and leisure park on the site of the old Broad Street colonial prison, with live music most evenings.",
+    "address": "Broad Street, Lagos Island",
+    "lat": 6.4527,
+    "lng": 3.3937,
+    "opening_hours": "9:00 – 22:00",
+    "entry_fee": 1000,
+    "visitor_tips": [
+     "Check the events board for live music nights",
+     "The food court is good value"
+    ],
+    "safety_notes": "Lagos Island traffic is heavy on weekdays; allow extra time.",
+    "image_url": "/images/places/freedom-park.jpg",
+    "rating": 4.5,
+    "reviews_count": 940,
+    "is_published": true,
+    "last_reviewed_on": "2026-10-24T00:00:00.000000Z",
+    "created_at": "2026-11-14T09:47:03.000000Z",
+    "updated_at": "2026-11-14T09:47:03.000000Z",
+    "image": "http://127.0.0.1:8000/images/places/freedom-park.jpg"
+   },
+   {
+    "id": 8,
+    "name": "Terra Kulture",
+    "slug": "terra-kulture",
+    "category": "Art",
+    "area": "Victoria Island",
+    "description": "An arts centre with a theatre, gallery, bookshop and Nigerian restaurant.",
+    "address": "1376 Tiamiyu Savage Street, Victoria Island",
+    "lat": 6.4335,
+    "lng": 3.4229,
+    "opening_hours": "9:00 – 21:00",
+    "entry_fee": 0,
+    "visitor_tips": [
+     "Book theatre tickets in advance",
+     "Try the restaurant for lunch"
+    ],
+    "safety_notes": null,
+    "image_url": null,
+    "rating": 4.6,
+    "reviews_count": 860,
+    "is_published": true,
+    "last_reviewed_on": "2026-10-24T00:00:00.000000Z",
+    "created_at": "2026-11-14T09:47:03.000000Z",
+    "updated_at": "2026-11-14T09:47:03.000000Z",
+    "image": null
+   },
+   {
+    "id": 7,
+    "name": "Kalakuta Republic Museum",
+    "slug": "kalakuta-republic-museum",
+    "category": "History",
+    "area": "Ikeja",
+    "description": "The former home of Afrobeat pioneer Fela Kuti, now a museum with his clothes, instruments and a rooftop bar.",
+    "address": "7 Gbemisola Street, Ikeja",
+    "lat": 6.5915,
+    "lng": 3.3517,
+    "opening_hours": "10:00 – 18:00",
+    "entry_fee": 2000,
+    "visitor_tips": [
+     "Combine with an evening at the New Afrika Shrine"
+    ],
+    "safety_notes": null,
+    "image_url": null,
+    "rating": 4.4,
+    "reviews_count": 420,
+    "is_published": true,
+    "last_reviewed_on": "2026-10-24T00:00:00.000000Z",
+    "created_at": "2026-11-14T09:47:03.000000Z",
+    "updated_at": "2026-11-14T09:47:03.000000Z",
+    "image": null
+   }
+  ]
+ },
+ "GET /tours": {
+  "current_page": 1,
+  "data": [
+   {
+    "id": 1,
+    "partner_id": 1,
+    "tour_category_id": 5,
+    "title": "Lekki Conservation Centre",
+    "slug": "lekki-conservation-centre",
+    "description": "Walk the longest canopy walkway in Africa, spot mona monkeys and crocodiles, and learn how the reserve protects Lagos wetlands with a naturalist guide.",
+    "area": "Lekki",
+    "meeting_point": "Lekki Conservation Centre main gate, Km 19 Lekki–Epe Expressway",
+    "meeting_lat": 6.4413,
+    "meeting_lng": 3.5357,
+    "duration_minutes": 240,
+    "price": 15000,
+    "min_group_size": 1,
+    "max_group_size": 10,
+    "languages": [
+     "English",
+     "Yoruba"
+    ],
+    "itinerary": [
+     "Meet your guide at the main gate",
+     "Nature trail and tree house",
+     "Canopy walkway (401 m)",
+     "Family park and picnic stop"
+    ],
+    "inclusions": [
+     "Entry ticket",
+     "Canopy walkway ticket",
+     "Bottled water",
+     "English-speaking guide"
+    ],
+    "exclusions": [
+     "Lunch",
+     "Hotel transfers"
+    ],
+    "addons": [
+     {
+      "code": "photo_pack",
+      "name": "Photo pack (20 edited photos)",
+      "price": 5000
+     },
+     {
+      "code": "lunch",
+      "name": "Picnic lunch",
+      "price": 6000
+     }
+    ],
+    "cancellation_policy": "Free cancellation up to 24 hours before the start. 50% refund within 24 hours. No refund for no-shows.",
+    "image_url": "/images/places/lekki-conservation-centre.jpg",
+    "wheelchair_accessible": false,
+    "rating": 4.8,
+    "reviews_count": 2300,
+    "is_featured": true,
+    "is_published": true,
+    "created_at": "2026-11-14T09:47:03.000000Z",
+    "updated_at": "2026-11-14T09:47:03.000000Z",
+    "image": "http://127.0.0.1:8000/images/places/lekki-conservation-centre.jpg",
+    "category": {
+     "id": 5,
+     "name": "Nature & Wildlife",
+     "slug": "nature-wildlife"
+    },
+    "partner": {
+     "id": 1,
+     "name": "Eko Nature Trails"
+    }
+   },
+   {
+    "id": 2,
+    "partner_id": 2,
+    "tour_category_id": 1,
+    "title": "Tarkwa Bay Boat Trip",
+    "slug": "tarkwa-bay-boat-trip",
+    "description": "Cross the harbour by speedboat to a sheltered beach for swimming and grilled fish, with life jackets and a beach umbrella waiting for you.",
+    "area": "Lagos Harbour",
+    "meeting_point": "Tarzan Jetty, Maroko Road, Victoria Island",
+    "meeting_lat": 6.4268,
+    "meeting_lng": 3.4291,
+    "duration_minutes": 360,
+    "price": 25000,
+    "min_group_size": 2,
+    "max_group_size": 12,
+    "languages": [
+     "English",
+     "Yoruba"
+    ],
+    "itinerary": [
+     "Board at Tarzan Jetty",
+     "Speedboat across Lagos Harbour",
+     "Free time on Tarkwa Bay",
+     "Grilled fish lunch",
+     "Return boat"
+    ],
+    "inclusions": [
+     "Return boat ride",
+     "Life jackets",
+     "Beach umbrella and chairs",
+     "Lunch"
+    ],
+    "exclusions": [
+     "Drinks",
+     "Water sports"
+    ],
+    "addons": [
+     {
+      "code": "photo_pack",
+      "name": "Photo pack (20 edited photos)",
+      "price": 5000
+     },
+     {
+      "code": "jet_ski",
+      "name": "Jet ski (20 minutes)",
+      "price": 15000
+     }
+    ],
+    "cancellation_policy": "Free cancellation up to 24 hours before the start. 50% refund within 24 hours. No refund for no-shows.",
+    "image_url": "/images/places/tarkwa-bay.jpg",
+    "wheelchair_accessible": false,
+    "rating": 4.7,
+    "reviews_count": 860,
+    "is_featured": true,
+    "is_published": true,
+    "created_at": "2026-11-14T09:47:03.000000Z",
+    "updated_at": "2026-11-14T09:47:03.000000Z",
+    "image": "http://127.0.0.1:8000/images/places/tarkwa-bay.jpg",
+    "category": {
+     "id": 1,
+     "name": "Island Tours",
+     "slug": "island-tours"
+    },
+    "partner": {
+     "id": 2,
+     "name": "Funmi Island Tours"
+    }
+   },
+   {
+    "id": 3,
+    "partner_id": 3,
+    "tour_category_id": 2,
+    "title": "Lagos Island Heritage Walk",
+    "slug": "lagos-island-heritage-walk",
+    "description": "Trace the city's story from the old colonial prison at Freedom Park to Brazilian Quarter houses, Tinubu Square and the Cathedral Church of Christ.",
+    "area": "Lagos Island",
+    "meeting_point": "Freedom Park, Broad Street, Lagos Island",
+    "meeting_lat": 6.4527,
+    "meeting_lng": 3.3937,
+    "duration_minutes": 300,
+    "price": 18000,
+    "min_group_size": 1,
+    "max_group_size": 10,
+    "languages": [
+     "English",
+     "Yoruba"
+    ],
+    "itinerary": [
+     "Freedom Park",
+     "Brazilian Quarter (Popo Aguda)",
+     "Tinubu Square",
+     "Cathedral Church of Christ",
+     "Balogun Market edge"
+    ],
+    "inclusions": [
+     "Historian guide",
+     "Freedom Park entry",
+     "Bottled water",
+     "Small chops tasting"
+    ],
+    "exclusions": [
+     "Hotel transfers"
+    ],
+    "addons": [
+     {
+      "code": "photo_pack",
+      "name": "Photo pack (20 edited photos)",
+      "price": 5000
+     }
+    ],
+    "cancellation_policy": "Free cancellation up to 24 hours before the start. 50% refund within 24 hours. No refund for no-shows.",
+    "image_url": "/images/places/freedom-park.jpg",
+    "wheelchair_accessible": false,
+    "rating": 4.9,
+    "reviews_count": 540,
+    "is_featured": true,
+    "is_published": true,
+    "created_at": "2026-11-14T09:47:03.000000Z",
+    "updated_at": "2026-11-14T09:47:03.000000Z",
+    "image": "http://127.0.0.1:8000/images/places/freedom-park.jpg",
+    "category": {
+     "id": 2,
+     "name": "Cultural",
+     "slug": "cultural"
+    },
+    "partner": {
+     "id": 3,
+     "name": "Eko Heritage Tours"
+    }
+   },
+   {
+    "id": 6,
+    "partner_id": 3,
+    "tour_category_id": 3,
+    "title": "Nike Art Gallery Visit",
+    "slug": "nike-art-gallery-visit",
+    "description": "Explore five floors of Nigerian art, from adire textiles to contemporary painting, and meet artists in the studio if they are in.",
+    "area": "Lekki",
+    "meeting_point": "Nike Art Gallery, 2 Elegushi Road, Lekki Phase 1",
+    "meeting_lat": 6.4371,
+    "meeting_lng": 3.4848,
+    "duration_minutes": 120,
+    "price": 12000,
+    "min_group_size": 1,
+    "max_group_size": 10,
+    "languages": [
+     "English",
+     "Yoruba"
+    ],
+    "itinerary": [
+     "Gallery tour (five floors)",
+     "Adire textile demonstration",
+     "Time in the shop"
+    ],
+    "inclusions": [
+     "Guide",
+     "Bottled water"
+    ],
+    "exclusions": [
+     "Artwork purchases"
+    ],
+    "addons": [
+     {
+      "code": "photo_pack",
+      "name": "Photo pack (20 edited photos)",
+      "price": 5000
+     },
+     {
+      "code": "adire_class",
+      "name": "Adire dyeing class (1 hour)",
+      "price": 10000
+     }
+    ],
+    "cancellation_policy": "Free cancellation up to 24 hours before the start. 50% refund within 24 hours. No refund for no-shows.",
+    "image_url": "/images/places/nike-art-gallery.jpg",
+    "wheelchair_accessible": true,
+    "rating": 4.7,
+    "reviews_count": 1200,
+    "is_featured": false,
+    "is_published": true,
+    "created_at": "2026-11-14T09:47:03.000000Z",
+    "updated_at": "2026-11-14T09:47:03.000000Z",
+    "image": "http://127.0.0.1:8000/images/places/nike-art-gallery.jpg",
+    "category": {
+     "id": 3,
+     "name": "City Tours",
+     "slug": "city-tours"
+    },
+    "partner": {
+     "id": 3,
+     "name": "Eko Heritage Tours"
+    }
+   },
+   {
+    "id": 4,
+    "partner_id": 4,
+    "tour_category_id": 6,
+    "title": "Lagos Street Food Tour",
+    "slug": "lagos-street-food-tour",
+    "description": "Taste suya, boli, amala, puff-puff and fresh zobo at the stalls locals swear by, with a guide who explains each dish and how spicy it really is.",
+    "area": "Surulere",
+    "meeting_point": "National Stadium main gate, Surulere",
+    "meeting_lat": 6.4997,
+    "meeting_lng": 3.3647,
+    "duration_minutes": 180,
+    "price": 22000,
+    "min_group_size": 1,
+    "max_group_size": 8,
+    "languages": [
+     "English",
+     "Yoruba"
+    ],
+    "itinerary": [
+     "Suya spot",
+     "Roadside boli and fish",
+     "Amala joint",
+     "Puff-puff and zobo"
+    ],
+    "inclusions": [
+     "Six tastings",
+     "Drinks",
+     "Food guide"
+    ],
+    "exclusions": [
+     "Hotel transfers"
+    ],
+    "addons": [
+     {
+      "code": "photo_pack",
+      "name": "Photo pack (20 edited photos)",
+      "price": 5000
+     }
+    ],
+    "cancellation_policy": "Free cancellation up to 24 hours before the start. 50% refund within 24 hours. No refund for no-shows.",
+    "image_url": "/images/places/lagos-street-food.jpg",
+    "wheelchair_accessible": false,
+    "rating": 4.8,
+    "reviews_count": 710,
+    "is_featured": false,
+    "is_published": true,
+    "created_at": "2026-11-14T09:47:03.000000Z",
+    "updated_at": "2026-11-14T09:47:03.000000Z",
+    "image": "http://127.0.0.1:8000/images/places/lagos-street-food.jpg",
+    "category": {
+     "id": 6,
+     "name": "Food",
+     "slug": "food"
+    },
+    "partner": {
+     "id": 4,
+     "name": "Taste of Eko"
+    }
+   },
+   {
+    "id": 5,
+    "partner_id": 5,
+    "tour_category_id": 4,
+    "title": "Victoria Island Nightlife",
+    "slug": "victoria-island-nightlife",
+    "description": "See Lagos after dark with a host: a rooftop sunset, Afrobeats live music and a well-known club, with a vetted Cabo ride between every stop.",
+    "area": "Victoria Island",
+    "meeting_point": "Eko Hotel roundabout, Victoria Island",
+    "meeting_lat": 6.4268,
+    "meeting_lng": 3.429,
+    "duration_minutes": 300,
+    "price": 30000,
+    "min_group_size": 2,
+    "max_group_size": 10,
+    "languages": [
+     "English",
+     "Yoruba"
+    ],
+    "itinerary": [
+     "Rooftop sunset drinks",
+     "Live Afrobeats bar",
+     "Club entry with table",
+     "Cabo ride home"
+    ],
+    "inclusions": [
+     "Host",
+     "Two welcome drinks",
+     "Club entry",
+     "Rides between venues"
+    ],
+    "exclusions": [
+     "Extra drinks",
+     "Food"
+    ],
+    "addons": [
+     {
+      "code": "photo_pack",
+      "name": "Photo pack (20 edited photos)",
+      "price": 5000
+     }
+    ],
+    "cancellation_policy": "Free cancellation up to 24 hours before the start. 50% refund within 24 hours. No refund for no-shows.",
+    "image_url": "/images/places/lagos-at-night.jpg",
+    "wheelchair_accessible": true,
+    "rating": 4.5,
+    "reviews_count": 320,
+    "is_featured": false,
+    "is_published": true,
+    "created_at": "2026-11-14T09:47:03.000000Z",
+    "updated_at": "2026-11-14T09:47:03.000000Z",
+    "image": "http://127.0.0.1:8000/images/places/lagos-at-night.jpg",
+    "category": {
+     "id": 4,
+     "name": "Nightlife",
+     "slug": "nightlife"
+    },
+    "partner": {
+     "id": 5,
+     "name": "Lagos After Dark"
+    }
+   }
+  ],
+  "first_page_url": "http://127.0.0.1:8000/api/v1/tours?page=1",
+  "from": 1,
+  "last_page": 1,
+  "last_page_url": "http://127.0.0.1:8000/api/v1/tours?page=1",
+  "links": [
+   {
+    "url": null,
+    "label": "&laquo; Previous",
+    "page": null,
+    "active": false
+   },
+   {
+    "url": "http://127.0.0.1:8000/api/v1/tours?page=1",
+    "label": "1",
+    "page": 1,
+    "active": true
+   },
+   {
+    "url": null,
+    "label": "Next &raquo;",
+    "page": null,
+    "active": false
+   }
+  ],
+  "next_page_url": null,
+  "path": "http://127.0.0.1:8000/api/v1/tours",
+  "per_page": 20,
+  "prev_page_url": null,
+  "to": 6,
+  "total": 6
+ },
+ "GET /tour-categories": {
+  "data": [
+   {
+    "id": 1,
+    "name": "Island Tours",
+    "slug": "island-tours",
+    "icon": "sailing",
+    "sort_order": 1,
+    "created_at": "2026-11-14T09:47:03.000000Z",
+    "updated_at": "2026-11-14T09:47:03.000000Z",
+    "tours_count": 1
+   },
+   {
+    "id": 2,
+    "name": "Cultural",
+    "slug": "cultural",
+    "icon": "museum",
+    "sort_order": 2,
+    "created_at": "2026-11-14T09:47:03.000000Z",
+    "updated_at": "2026-11-14T09:47:03.000000Z",
+    "tours_count": 1
+   },
+   {
+    "id": 3,
+    "name": "City Tours",
+    "slug": "city-tours",
+    "icon": "location_city",
+    "sort_order": 3,
+    "created_at": "2026-11-14T09:47:03.000000Z",
+    "updated_at": "2026-11-14T09:47:03.000000Z",
+    "tours_count": 1
+   },
+   {
+    "id": 4,
+    "name": "Nightlife",
+    "slug": "nightlife",
+    "icon": "nightlife",
+    "sort_order": 4,
+    "created_at": "2026-11-14T09:47:03.000000Z",
+    "updated_at": "2026-11-14T09:47:03.000000Z",
+    "tours_count": 1
+   },
+   {
+    "id": 5,
+    "name": "Nature & Wildlife",
+    "slug": "nature-wildlife",
+    "icon": "forest",
+    "sort_order": 5,
+    "created_at": "2026-11-14T09:47:03.000000Z",
+    "updated_at": "2026-11-14T09:47:03.000000Z",
+    "tours_count": 1
+   },
+   {
+    "id": 6,
+    "name": "Food",
+    "slug": "food",
+    "icon": "restaurant",
+    "sort_order": 6,
+    "created_at": "2026-11-14T09:47:03.000000Z",
+    "updated_at": "2026-11-14T09:47:03.000000Z",
+    "tours_count": 1
+   }
+  ]
+ },
+ "GET /rider/me": {
+  "data": {
+   "id": 8,
+   "first_name": "Oliver",
+   "last_name": "Hughes",
+   "email": "oliver.hughes@example.co.uk",
+   "phone": "+447700900456",
+   "photo_url": null,
+   "nationality": "British",
+   "home_currency": "GBP",
+   "traveller_type": "international",
+   "language": "en",
+   "accessibility": null,
+   "wallet_balance": 40000,
+   "loyalty_points": 950,
+   "referral_code": "OLIV0008",
+   "referred_by_id": null,
+   "status": "active",
+   "rating": 4.75,
+   "last_active_at": "2026-11-14T13:55:19.000000Z",
+   "created_at": "2026-10-06T09:47:03.000000Z",
+   "updated_at": "2026-11-14T13:55:19.000000Z",
+   "deleted_at": null,
+   "name": "Oliver Hughes",
+   "emergency_contacts": [
+    {
+     "id": 4,
+     "rider_id": 8,
+     "name": "Kemi Hughes",
+     "phone": "+447700900118",
+     "relationship": "Partner",
+     "share_trips_automatically": false,
+     "created_at": "2026-11-14T13:55:19.000000Z",
+     "updated_at": "2026-11-14T13:55:19.000000Z"
+    }
+   ],
+   "saved_places": [
+    {
+     "id": 5,
+     "rider_id": 8,
+     "label": "Hotel",
+     "address": "Eko Hotel & Suites, Victoria Island",
+     "lat": 6.4268,
+     "lng": 3.429,
+     "created_at": "2026-11-14T13:55:19.000000Z",
+     "updated_at": "2026-11-14T13:55:19.000000Z"
+    }
+   ]
+  }
+ },
+ "GET /rider/trips": {
+  "current_page": 1,
+  "data": [
+   {
+    "id": 30,
+    "reference": "CB-SRBMIP",
+    "rider_id": 8,
+    "driver_id": 8,
+    "vehicle_id": 8,
+    "ride_type_id": 1,
+    "status": "completed",
+    "pickup_address": "Ikoyi Club 1938, Ikoyi",
+    "pickup_lat": 6.452,
+    "pickup_lng": 3.43,
+    "dropoff_address": "Shoprite Surulere, Adeniran Ogunsanya",
+    "dropoff_lat": 6.493,
+    "dropoff_lng": 3.357,
+    "stops": null,
+    "scheduled_at": null,
+    "pin": "5220",
+    "distance_km": 12.51,
+    "duration_minutes": 35,
+    "surge_multiplier": 1,
+    "fare_base": 700,
+    "fare_distance": 1501,
+    "fare_time": 700,
+    "fare_stops": 0,
+    "tolls": 0,
+    "discount": 0,
+    "fare_total": 2901,
+    "tip": 0,
+    "commission": 580,
+    "driver_earnings": 2321,
+    "cancellation_fee": 0,
+    "promo_code_id": null,
+    "payment_method": "card",
+    "payment_status": "paid",
+    "cancelled_by": null,
+    "cancellation_reason": null,
+    "rider_rating": null,
+    "driver_rating": 5,
+    "rider_feedback": null,
+    "driver_feedback": null,
+    "share_token": null,
+    "accepted_at": "2026-11-14T11:08:00.000000Z",
+    "arrived_at": "2026-11-14T11:14:00.000000Z",
+    "started_at": "2026-11-14T11:16:00.000000Z",
+    "completed_at": "2026-11-14T11:51:00.000000Z",
+    "cancelled_at": null,
+    "created_at": "2026-11-14T11:07:00.000000Z",
+    "updated_at": "2026-11-14T11:07:00.000000Z",
+    "driver": {
+     "id": 8,
+     "first_name": "Halima",
+     "last_name": "Sani",
+     "photo_url": null,
+     "rating": 4.38,
+     "languages": [
+      "English",
+      "Igbo"
+     ],
+     "name": "Halima Sani"
+    },
+    "vehicle": {
+     "id": 8,
+     "make": "Hyundai",
+     "model": "Elantra",
+     "year": 2020,
+     "colour": "Silver",
+     "plate_number": "IKD 318 MN",
+     "seats": 4
+    },
+    "ride_type": {
+     "id": 1,
+     "code": "economy",
+     "name": "Economy"
+    }
+   },
+   {
+    "id": 80,
+    "reference": "CB-RLOBDO",
+    "rider_id": 8,
+    "driver_id": 4,
+    "vehicle_id": 4,
+    "ride_type_id": 1,
+    "status": "completed",
+    "pickup_address": "Tarzan Jetty, Victoria Island",
+    "pickup_lat": 6.4268,
+    "pickup_lng": 3.4291,
+    "dropoff_address": "Ikoyi Club 1938, Ikoyi",
+    "dropoff_lat": 6.452,
+    "dropoff_lng": 3.43,
+    "stops": null,
+    "scheduled_at": null,
+    "pin": "7779",
+    "distance_km": 3.79,
+    "duration_minutes": 11,
+    "surge_multiplier": 1.2,
+    "fare_base": 700,
+    "fare_distance": 455,
+    "fare_time": 220,
+    "fare_stops": 0,
+    "tolls": 0,
+    "discount": 0,
+    "fare_total": 1650,
+    "tip": 200,
+    "commission": 330,
+    "driver_earnings": 1520,
+    "cancellation_fee": 0,
+    "promo_code_id": null,
+    "payment_method": "card",
+    "payment_status": "paid",
+    "cancelled_by": null,
+    "cancellation_reason": null,
+    "rider_rating": null,
+    "driver_rating": 5,
+    "rider_feedback": null,
+    "driver_feedback": null,
+    "share_token": null,
+    "accepted_at": "2026-11-11T13:10:00.000000Z",
+    "arrived_at": "2026-11-11T13:16:00.000000Z",
+    "started_at": "2026-11-11T13:18:00.000000Z",
+    "completed_at": "2026-11-11T13:29:00.000000Z",
+    "cancelled_at": null,
+    "created_at": "2026-11-11T13:09:00.000000Z",
+    "updated_at": "2026-11-11T13:09:00.000000Z",
+    "driver": {
+     "id": 4,
+     "first_name": "Yusuf",
+     "last_name": "Abdullahi",
+     "photo_url": null,
+     "rating": 4.57,
+     "languages": [
+      "English",
+      "Yoruba",
+      "Pidgin"
+     ],
+     "name": "Yusuf Abdullahi"
+    },
+    "vehicle": {
+     "id": 4,
+     "make": "Honda",
+     "model": "Accord",
+     "year": 2017,
+     "colour": "Blue",
+     "plate_number": "EKY 552 BD",
+     "seats": 4
+    },
+    "ride_type": {
+     "id": 1,
+     "code": "economy",
+     "name": "Economy"
+    }
+   },
+   {
+    "id": 20,
+    "reference": "CB-B2P0HT",
+    "rider_id": 8,
+    "driver_id": 7,
+    "vehicle_id": 7,
+    "ride_type_id": 1,
+    "status": "completed",
+    "pickup_address": "The Palms Shopping Mall, Lekki",
+    "pickup_lat": 6.4359,
+    "pickup_lng": 3.451,
+    "dropoff_address": "Landmark Beach, Oniru",
+    "dropoff_lat": 6.421,
+    "dropoff_lng": 3.443,
+    "stops": null,
+    "scheduled_at": null,
+    "pin": "1905",
+    "distance_km": 2.54,
+    "duration_minutes": 7,
+    "surge_multiplier": 1,
+    "fare_base": 700,
+    "fare_distance": 305,
+    "fare_time": 140,
+    "fare_stops": 0,
+    "tolls": 0,
+    "discount": 0,
+    "fare_total": 1500,
+    "tip": 0,
+    "commission": 300,
+    "driver_earnings": 1200,
+    "cancellation_fee": 0,
+    "promo_code_id": null,
+    "payment_method": "wallet",
+    "payment_status": "paid",
+    "cancelled_by": null,
+    "cancellation_reason": null,
+    "rider_rating": 5,
+    "driver_rating": 5,
+    "rider_feedback": null,
+    "driver_feedback": null,
+    "share_token": null,
+    "accepted_at": "2026-11-10T16:22:00.000000Z",
+    "arrived_at": "2026-11-10T16:28:00.000000Z",
+    "started_at": "2026-11-10T16:30:00.000000Z",
+    "completed_at": "2026-11-10T16:37:00.000000Z",
+    "cancelled_at": null,
+    "created_at": "2026-11-10T16:21:00.000000Z",
+    "updated_at": "2026-11-10T16:21:00.000000Z",
+    "driver": {
+     "id": 7,
+     "first_name": "Ifeanyi",
+     "last_name": "Obi",
+     "photo_url": null,
+     "rating": 4.57,
+     "languages": [
+      "English",
+      "Yoruba",
+      "Pidgin"
+     ],
+     "name": "Ifeanyi Obi"
+    },
+    "vehicle": {
+     "id": 7,
+     "make": "Kia",
+     "model": "Rio",
+     "year": 2019,
+     "colour": "Red",
+     "plate_number": "FST 664 KL",
+     "seats": 4
+    },
+    "ride_type": {
+     "id": 1,
+     "code": "economy",
+     "name": "Economy"
+    }
+   },
+   {
+    "id": 27,
+    "reference": "CB-PUIUOC",
+    "rider_id": 8,
+    "driver_id": 7,
+    "vehicle_id": 7,
+    "ride_type_id": 1,
+    "status": "completed",
+    "pickup_address": "Lekki Conservation Centre, Lekki",
+    "pickup_lat": 6.4413,
+    "pickup_lng": 3.5357,
+    "dropoff_address": "Freedom Park, Lagos Island",
+    "dropoff_lat": 6.4527,
+    "dropoff_lng": 3.3937,
+    "stops": null,
+    "scheduled_at": null,
+    "pin": "7236",
+    "distance_km": 21.25,
+    "duration_minutes": 58,
+    "surge_multiplier": 1,
+    "fare_base": 700,
+    "fare_distance": 2550,
+    "fare_time": 1160,
+    "fare_stops": 0,
+    "tolls": 250,
+    "discount": 0,
+    "fare_total": 4660,
+    "tip": 0,
+    "commission": 932,
+    "driver_earnings": 3728,
+    "cancellation_fee": 0,
+    "promo_code_id": null,
+    "payment_method": "card",
+    "payment_status": "paid",
+    "cancelled_by": null,
+    "cancellation_reason": null,
+    "rider_rating": 4,
+    "driver_rating": null,
+    "rider_feedback": null,
+    "driver_feedback": null,
+    "share_token": null,
+    "accepted_at": "2026-11-10T12:00:00.000000Z",
+    "arrived_at": "2026-11-10T12:06:00.000000Z",
+    "started_at": "2026-11-10T12:08:00.000000Z",
+    "completed_at": "2026-11-10T13:06:00.000000Z",
+    "cancelled_at": null,
+    "created_at": "2026-11-10T11:59:00.000000Z",
+    "updated_at": "2026-11-10T11:59:00.000000Z",
+    "driver": {
+     "id": 7,
+     "first_name": "Ifeanyi",
+     "last_name": "Obi",
+     "photo_url": null,
+     "rating": 4.57,
+     "languages": [
+      "English",
+      "Yoruba",
+      "Pidgin"
+     ],
+     "name": "Ifeanyi Obi"
+    },
+    "vehicle": {
+     "id": 7,
+     "make": "Kia",
+     "model": "Rio",
+     "year": 2019,
+     "colour": "Red",
+     "plate_number": "FST 664 KL",
+     "seats": 4
+    },
+    "ride_type": {
+     "id": 1,
+     "code": "economy",
+     "name": "Economy"
+    }
+   },
+   {
+    "id": 49,
+    "reference": "CB-ETJLWO",
+    "rider_id": 8,
+    "driver_id": 1,
+    "vehicle_id": 1,
+    "ride_type_id": 1,
+    "status": "completed",
+    "pickup_address": "Freedom Park, Lagos Island",
+    "pickup_lat": 6.4527,
+    "pickup_lng": 3.3937,
+    "dropoff_address": "National Stadium, Surulere",
+    "dropoff_lat": 6.4997,
+    "dropoff_lng": 3.3647,
+    "stops": null,
+    "scheduled_at": null,
+    "pin": "6002",
+    "distance_km": 8.28,
+    "duration_minutes": 23,
+    "surge_multiplier": 1,
+    "fare_base": 700,
+    "fare_distance": 994,
+    "fare_time": 460,
+    "fare_stops": 0,
+    "tolls": 0,
+    "discount": 0,
+    "fare_total": 2154,
+    "tip": 0,
+    "commission": 431,
+    "driver_earnings": 1723,
+    "cancellation_fee": 0,
+    "promo_code_id": null,
+    "payment_method": "bank_transfer",
+    "payment_status": "paid",
+    "cancelled_by": null,
+    "cancellation_reason": null,
+    "rider_rating": 5,
+    "driver_rating": null,
+    "rider_feedback": null,
+    "driver_feedback": null,
+    "share_token": null,
+    "accepted_at": "2026-11-08T22:07:00.000000Z",
+    "arrived_at": "2026-11-08T22:13:00.000000Z",
+    "started_at": "2026-11-08T22:15:00.000000Z",
+    "completed_at": "2026-11-08T22:38:00.000000Z",
+    "cancelled_at": null,
+    "created_at": "2026-11-08T22:06:00.000000Z",
+    "updated_at": "2026-11-08T22:06:00.000000Z",
+    "driver": {
+     "id": 1,
+     "first_name": "Emeka",
+     "last_name": "Nwosu",
+     "photo_url": null,
+     "rating": 4.92,
+     "languages": [
+      "English",
+      "Yoruba",
+      "Pidgin"
+     ],
+     "name": "Emeka Nwosu"
+    },
+    "vehicle": {
+     "id": 1,
+     "make": "Toyota",
+     "model": "Corolla",
+     "year": 2019,
+     "colour": "Silver",
+     "plate_number": "LND 482 KJ",
+     "seats": 4
+    },
+    "ride_type": {
+     "id": 1,
+     "code": "economy",
+     "name": "Economy"
+    }
+   },
+   {
+    "id": 24,
+    "reference": "CB-EHXB0Y",
+    "rider_id": 8,
+    "driver_id": 4,
+    "vehicle_id": 4,
+    "ride_type_id": 1,
+    "status": "completed",
+    "pickup_address": "Admiralty Way, Lekki Phase 1",
+    "pickup_lat": 6.4474,
+    "pickup_lng": 3.4728,
+    "dropoff_address": "National Stadium, Surulere",
+    "dropoff_lat": 6.4997,
+    "dropoff_lng": 3.3647,
+    "stops": null,
+    "scheduled_at": null,
+    "pin": "0101",
+    "distance_km": 17.93,
+    "duration_minutes": 49,
+    "surge_multiplier": 1,
+    "fare_base": 700,
+    "fare_distance": 2152,
+    "fare_time": 980,
+    "fare_stops": 0,
+    "tolls": 250,
+    "discount": 0,
+    "fare_total": 4082,
+    "tip": 0,
+    "commission": 816,
+    "driver_earnings": 3266,
+    "cancellation_fee": 0,
+    "promo_code_id": null,
+    "payment_method": "wallet",
+    "payment_status": "paid",
+    "cancelled_by": null,
+    "cancellation_reason": null,
+    "rider_rating": 5,
+    "driver_rating": null,
+    "rider_feedback": null,
+    "driver_feedback": null,
+    "share_token": null,
+    "accepted_at": "2026-11-07T21:35:00.000000Z",
+    "arrived_at": "2026-11-07T21:41:00.000000Z",
+    "started_at": "2026-11-07T21:43:00.000000Z",
+    "completed_at": "2026-11-07T22:32:00.000000Z",
+    "cancelled_at": null,
+    "created_at": "2026-11-07T21:34:00.000000Z",
+    "updated_at": "2026-11-07T21:34:00.000000Z",
+    "driver": {
+     "id": 4,
+     "first_name": "Yusuf",
+     "last_name": "Abdullahi",
+     "photo_url": null,
+     "rating": 4.57,
+     "languages": [
+      "English",
+      "Yoruba",
+      "Pidgin"
+     ],
+     "name": "Yusuf Abdullahi"
+    },
+    "vehicle": {
+     "id": 4,
+     "make": "Honda",
+     "model": "Accord",
+     "year": 2017,
+     "colour": "Blue",
+     "plate_number": "EKY 552 BD",
+     "seats": 4
+    },
+    "ride_type": {
+     "id": 1,
+     "code": "economy",
+     "name": "Economy"
+    }
+   },
+   {
+    "id": 78,
+    "reference": "CB-8VW6M2",
+    "rider_id": 8,
+    "driver_id": 6,
+    "vehicle_id": 6,
+    "ride_type_id": 4,
+    "status": "completed",
+    "pickup_address": "Shoprite Surulere, Adeniran Ogunsanya",
+    "pickup_lat": 6.493,
+    "pickup_lng": 3.357,
+    "dropoff_address": "Admiralty Way, Lekki Phase 1",
+    "dropoff_lat": 6.4474,
+    "dropoff_lng": 3.4728,
+    "stops": null,
+    "scheduled_at": null,
+    "pin": "3452",
+    "distance_km": 18.58,
+    "duration_minutes": 51,
+    "surge_multiplier": 1,
+    "fare_base": 2200,
+    "fare_distance": 6689,
+    "fare_time": 2805,
+    "fare_stops": 0,
+    "tolls": 250,
+    "discount": 0,
+    "fare_total": 11944,
+    "tip": 0,
+    "commission": 2389,
+    "driver_earnings": 9555,
+    "cancellation_fee": 0,
+    "promo_code_id": null,
+    "payment_method": "card",
+    "payment_status": "paid",
+    "cancelled_by": null,
+    "cancellation_reason": null,
+    "rider_rating": 5,
+    "driver_rating": 5,
+    "rider_feedback": null,
+    "driver_feedback": null,
+    "share_token": null,
+    "accepted_at": "2026-11-04T22:38:00.000000Z",
+    "arrived_at": "2026-11-04T22:44:00.000000Z",
+    "started_at": "2026-11-04T22:46:00.000000Z",
+    "completed_at": "2026-11-04T23:37:00.000000Z",
+    "cancelled_at": null,
+    "created_at": "2026-11-04T22:37:00.000000Z",
+    "updated_at": "2026-11-04T22:37:00.000000Z",
+    "driver": {
+     "id": 6,
+     "first_name": "Olumide",
+     "last_name": "Fashola",
+     "photo_url": null,
+     "rating": 4.8,
+     "languages": [
+      "English",
+      "Hausa"
+     ],
+     "name": "Olumide Fashola"
+    },
+    "vehicle": {
+     "id": 6,
+     "make": "Lexus",
+     "model": "RX 350",
+     "year": 2022,
+     "colour": "Black",
+     "plate_number": "LND 207 PR",
+     "seats": 4
+    },
+    "ride_type": {
+     "id": 4,
+     "code": "premium",
+     "name": "Premium"
+    }
+   },
+   {
+    "id": 25,
+    "reference": "CB-L0VQAX",
+    "rider_id": 8,
+    "driver_id": 1,
+    "vehicle_id": 1,
+    "ride_type_id": 1,
+    "status": "completed",
+    "pickup_address": "Shoprite Surulere, Adeniran Ogunsanya",
+    "pickup_lat": 6.493,
+    "pickup_lng": 3.357,
+    "dropoff_address": "Admiralty Way, Lekki Phase 1",
+    "dropoff_lat": 6.4474,
+    "dropoff_lng": 3.4728,
+    "stops": null,
+    "scheduled_at": null,
+    "pin": "7934",
+    "distance_km": 18.58,
+    "duration_minutes": 51,
+    "surge_multiplier": 1,
+    "fare_base": 700,
+    "fare_distance": 2230,
+    "fare_time": 1020,
+    "fare_stops": 0,
+    "tolls": 250,
+    "discount": 0,
+    "fare_total": 4200,
+    "tip": 0,
+    "commission": 840,
+    "driver_earnings": 3360,
+    "cancellation_fee": 0,
+    "promo_code_id": null,
+    "payment_method": "card",
+    "payment_status": "paid",
+    "cancelled_by": null,
+    "cancellation_reason": null,
+    "rider_rating": 5,
+    "driver_rating": null,
+    "rider_feedback": null,
+    "driver_feedback": null,
+    "share_token": null,
+    "accepted_at": "2026-10-30T18:23:00.000000Z",
+    "arrived_at": "2026-10-30T18:29:00.000000Z",
+    "started_at": "2026-10-30T18:31:00.000000Z",
+    "completed_at": "2026-10-30T19:22:00.000000Z",
+    "cancelled_at": null,
+    "created_at": "2026-10-30T18:22:00.000000Z",
+    "updated_at": "2026-10-30T18:22:00.000000Z",
+    "driver": {
+     "id": 1,
+     "first_name": "Emeka",
+     "last_name": "Nwosu",
+     "photo_url": null,
+     "rating": 4.92,
+     "languages": [
+      "English",
+      "Yoruba",
+      "Pidgin"
+     ],
+     "name": "Emeka Nwosu"
+    },
+    "vehicle": {
+     "id": 1,
+     "make": "Toyota",
+     "model": "Corolla",
+     "year": 2019,
+     "colour": "Silver",
+     "plate_number": "LND 482 KJ",
+     "seats": 4
+    },
+    "ride_type": {
+     "id": 1,
+     "code": "economy",
+     "name": "Economy"
+    }
+   }
+  ],
+  "first_page_url": "http://127.0.0.1:8000/api/v1/rider/trips?page=1",
+  "from": 1,
+  "last_page": 1,
+  "last_page_url": "http://127.0.0.1:8000/api/v1/rider/trips?page=1",
+  "links": [
+   {
+    "url": null,
+    "label": "&laquo; Previous",
+    "page": null,
+    "active": false
+   },
+   {
+    "url": "http://127.0.0.1:8000/api/v1/rider/trips?page=1",
+    "label": "1",
+    "page": 1,
+    "active": true
+   },
+   {
+    "url": null,
+    "label": "Next &raquo;",
+    "page": null,
+    "active": false
+   }
+  ],
+  "next_page_url": null,
+  "path": "http://127.0.0.1:8000/api/v1/rider/trips",
+  "per_page": 20,
+  "prev_page_url": null,
+  "to": 8,
+  "total": 8
+ },
+ "GET /rider/shuttles": {
+  "current_page": 1,
+  "data": [
+   {
+    "id": 4,
+    "reference": "SH-JUS4MC",
+    "rider_id": 8,
+    "driver_id": 6,
+    "direction": "airport_pickup",
+    "airport": "Murtala Muhammed International (LOS)",
+    "terminal": "Terminal 2 (International)",
+    "flight_number": "VS411",
+    "flight_time": "2026-11-15T06:05:00.000000Z",
+    "flight_status": "scheduled",
+    "pickup_at": "2026-11-15T06:50:00.000000Z",
+    "address": "Admiralty Way, Lekki Phase 1",
+    "lat": 6.4474,
+    "lng": 3.4728,
+    "ride_type_id": 4,
+    "passengers": 2,
+    "large_bags": 3,
+    "small_bags": 2,
+    "price": 45000,
+    "driver_payout": 36000,
+    "meeting_point": "Arrivals hall exit, by the Cabo sign at Pillar 3",
+    "name_board": "HUGHES",
+    "notes": null,
+    "payment_method": "card",
+    "payment_status": "paid",
+    "status": "driver_assigned",
+    "driver_assigned_at": "2026-11-13T09:47:04.000000Z",
+    "created_at": "2026-11-06T09:47:04.000000Z",
+    "updated_at": "2026-11-14T09:47:04.000000Z",
+    "driver": {
+     "id": 6,
+     "first_name": "Olumide",
+     "last_name": "Fashola",
+     "photo_url": null,
+     "rating": 4.8,
+     "name": "Olumide Fashola",
+     "active_vehicle": {
+      "id": 6,
+      "driver_id": 6,
+      "make": "Lexus",
+      "model": "RX 350",
+      "colour": "Black",
+      "plate_number": "LND 207 PR"
+     }
+    },
+    "ride_type": {
+     "id": 4,
+     "code": "premium",
+     "name": "Premium"
+    }
+   }
+  ],
+  "first_page_url": "http://127.0.0.1:8000/api/v1/rider/shuttles?page=1",
+  "from": 1,
+  "last_page": 1,
+  "last_page_url": "http://127.0.0.1:8000/api/v1/rider/shuttles?page=1",
+  "links": [
+   {
+    "url": null,
+    "label": "&laquo; Previous",
+    "page": null,
+    "active": false
+   },
+   {
+    "url": "http://127.0.0.1:8000/api/v1/rider/shuttles?page=1",
+    "label": "1",
+    "page": 1,
+    "active": true
+   },
+   {
+    "url": null,
+    "label": "Next &raquo;",
+    "page": null,
+    "active": false
+   }
+  ],
+  "next_page_url": null,
+  "path": "http://127.0.0.1:8000/api/v1/rider/shuttles",
+  "per_page": 20,
+  "prev_page_url": null,
+  "to": 1,
+  "total": 1
+ },
+ "GET /rider/tour-bookings": {
+  "current_page": 1,
+  "data": [
+   {
+    "id": 60,
+    "reference": "TR-Q7LMVC",
+    "rider_id": 8,
+    "tour_id": 5,
+    "tour_slot_id": 172,
+    "guests": 2,
+    "subtotal": 60000,
+    "addons": [],
+    "addons_total": 0,
+    "ride_addon_price": 0,
+    "ride_trip_id": null,
+    "promo_code_id": null,
+    "discount": 0,
+    "total": 60000,
+    "payment_method": "wallet",
+    "payment_status": "paid",
+    "refund_amount": 0,
+    "status": "confirmed",
+    "qr_token": "3D7hGMvP02LgIRFlYOTAg63q3TMF6WT6",
+    "company_name": null,
+    "checked_in_at": null,
+    "cancelled_at": null,
+    "created_at": "2026-11-23T09:00:00.000000Z",
+    "updated_at": "2026-11-14T09:47:05.000000Z",
+    "tour": {
+     "id": 5,
+     "title": "Victoria Island Nightlife",
+     "slug": "victoria-island-nightlife",
+     "area": "Victoria Island",
+     "meeting_point": "Eko Hotel roundabout, Victoria Island",
+     "duration_minutes": 300,
+     "image_url": "/images/places/lagos-at-night.jpg",
+     "image": "http://127.0.0.1:8000/images/places/lagos-at-night.jpg"
+    },
+    "slot": {
+     "id": 172,
+     "starts_at": "2026-11-25T09:00:00.000000Z",
+     "remaining": 0
+    },
+    "review": null
+   },
+   {
+    "id": 59,
+    "reference": "TR-R9OOZ2",
+    "rider_id": 8,
+    "tour_id": 5,
+    "tour_slot_id": 169,
+    "guests": 3,
+    "subtotal": 90000,
+    "addons": [],
+    "addons_total": 0,
+    "ride_addon_price": 0,
+    "ride_trip_id": null,
+    "promo_code_id": null,
+    "discount": 0,
+    "total": 90000,
+    "payment_method": "card",
+    "payment_status": "paid",
+    "refund_amount": 0,
+    "status": "confirmed",
+    "qr_token": "dzCnKNloeJtBMMC2Wgyz1NqNvrXHmeri",
+    "company_name": null,
+    "checked_in_at": null,
+    "cancelled_at": null,
+    "created_at": "2026-11-15T09:00:00.000000Z",
+    "updated_at": "2026-11-14T09:47:05.000000Z",
+    "tour": {
+     "id": 5,
+     "title": "Victoria Island Nightlife",
+     "slug": "victoria-island-nightlife",
+     "area": "Victoria Island",
+     "meeting_point": "Eko Hotel roundabout, Victoria Island",
+     "duration_minutes": 300,
+     "image_url": "/images/places/lagos-at-night.jpg",
+     "image": "http://127.0.0.1:8000/images/places/lagos-at-night.jpg"
+    },
+    "slot": {
+     "id": 169,
+     "starts_at": "2026-11-22T09:00:00.000000Z",
+     "remaining": 0
+    },
+    "review": null
+   },
+   {
+    "id": 64,
+    "reference": "TR-MXGJYP",
+    "rider_id": 8,
+    "tour_id": 6,
+    "tour_slot_id": 182,
+    "guests": 3,
+    "subtotal": 36000,
+    "addons": [],
+    "addons_total": 0,
+    "ride_addon_price": 0,
+    "ride_trip_id": null,
+    "promo_code_id": null,
+    "discount": 0,
+    "total": 36000,
+    "payment_method": "card",
+    "payment_status": "paid",
+    "refund_amount": 0,
+    "status": "completed",
+    "qr_token": "5ryBjKmSSfNvjQ07pR5zxvVSzM5MY8LR",
+    "company_name": null,
+    "checked_in_at": "2026-11-07T08:50:00.000000Z",
+    "cancelled_at": null,
+    "created_at": "2026-11-02T09:00:00.000000Z",
+    "updated_at": "2026-11-14T09:47:05.000000Z",
+    "tour": {
+     "id": 6,
+     "title": "Nike Art Gallery Visit",
+     "slug": "nike-art-gallery-visit",
+     "area": "Lekki",
+     "meeting_point": "Nike Art Gallery, 2 Elegushi Road, Lekki Phase 1",
+     "duration_minutes": 120,
+     "image_url": "/images/places/nike-art-gallery.jpg",
+     "image": "http://127.0.0.1:8000/images/places/nike-art-gallery.jpg"
+    },
+    "slot": {
+     "id": 182,
+     "starts_at": "2026-11-07T09:00:00.000000Z",
+     "remaining": 0
+    },
+    "review": null
+   }
+  ],
+  "first_page_url": "http://127.0.0.1:8000/api/v1/rider/tour-bookings?page=1",
+  "from": 1,
+  "last_page": 1,
+  "last_page_url": "http://127.0.0.1:8000/api/v1/rider/tour-bookings?page=1",
+  "links": [
+   {
+    "url": null,
+    "label": "&laquo; Previous",
+    "page": null,
+    "active": false
+   },
+   {
+    "url": "http://127.0.0.1:8000/api/v1/rider/tour-bookings?page=1",
+    "label": "1",
+    "page": 1,
+    "active": true
+   },
+   {
+    "url": null,
+    "label": "Next &raquo;",
+    "page": null,
+    "active": false
+   }
+  ],
+  "next_page_url": null,
+  "path": "http://127.0.0.1:8000/api/v1/rider/tour-bookings",
+  "per_page": 20,
+  "prev_page_url": null,
+  "to": 3,
+  "total": 3
+ },
+ "GET /rider/wishlist": {
+  "data": [
+   {
+    "id": 1,
+    "rider_id": 8,
+    "item_type": "attraction",
+    "item_id": 5,
+    "created_at": "2026-11-14T13:55:19.000000Z",
+    "updated_at": "2026-11-14T13:55:19.000000Z",
+    "item": {
+     "id": 5,
+     "name": "Lekki–Ikoyi Link Bridge",
+     "slug": "lekki-ikoyi-link-bridge",
+     "category": "Landmarks",
+     "area": "Ikoyi",
+     "description": "A cable-stayed toll bridge linking Ikoyi and Lekki, best seen at sunset when it is lit up.",
+     "address": "Lekki–Ikoyi Link Bridge",
+     "lat": 6.4449,
+     "lng": 3.4395,
+     "opening_hours": "Open daily",
+     "entry_fee": 0,
+     "visitor_tips": [
+      "Pedestrians can walk the bridge early in the morning",
+      "Sunset photos are best from the Ikoyi end"
+     ],
+     "safety_notes": "Do not stop vehicles on the bridge.",
+     "image_url": "/images/places/lekki-ikoyi-bridge.jpg",
+     "rating": 4.6,
+     "reviews_count": 3100,
+     "is_published": true,
+     "last_reviewed_on": "2026-10-24T00:00:00.000000Z",
+     "created_at": "2026-11-14T09:47:03.000000Z",
+     "updated_at": "2026-11-14T09:47:03.000000Z",
+     "image": "http://127.0.0.1:8000/images/places/lekki-ikoyi-bridge.jpg"
+    }
+   },
+   {
+    "id": 2,
+    "rider_id": 8,
+    "item_type": "tour",
+    "item_id": 1,
+    "created_at": "2026-11-14T13:55:19.000000Z",
+    "updated_at": "2026-11-14T13:55:19.000000Z",
+    "item": {
+     "id": 1,
+     "partner_id": 1,
+     "tour_category_id": 5,
+     "title": "Lekki Conservation Centre",
+     "slug": "lekki-conservation-centre",
+     "description": "Walk the longest canopy walkway in Africa, spot mona monkeys and crocodiles, and learn how the reserve protects Lagos wetlands with a naturalist guide.",
+     "area": "Lekki",
+     "meeting_point": "Lekki Conservation Centre main gate, Km 19 Lekki–Epe Expressway",
+     "meeting_lat": 6.4413,
+     "meeting_lng": 3.5357,
+     "duration_minutes": 240,
+     "price": 15000,
+     "min_group_size": 1,
+     "max_group_size": 10,
+     "languages": [
+      "English",
+      "Yoruba"
+     ],
+     "itinerary": [
+      "Meet your guide at the main gate",
+      "Nature trail and tree house",
+      "Canopy walkway (401 m)",
+      "Family park and picnic stop"
+     ],
+     "inclusions": [
+      "Entry ticket",
+      "Canopy walkway ticket",
+      "Bottled water",
+      "English-speaking guide"
+     ],
+     "exclusions": [
+      "Lunch",
+      "Hotel transfers"
+     ],
+     "addons": [
+      {
+       "code": "photo_pack",
+       "name": "Photo pack (20 edited photos)",
+       "price": 5000
+      },
+      {
+       "code": "lunch",
+       "name": "Picnic lunch",
+       "price": 6000
+      }
+     ],
+     "cancellation_policy": "Free cancellation up to 24 hours before the start. 50% refund within 24 hours. No refund for no-shows.",
+     "image_url": "/images/places/lekki-conservation-centre.jpg",
+     "wheelchair_accessible": false,
+     "rating": 4.8,
+     "reviews_count": 2300,
+     "is_featured": true,
+     "is_published": true,
+     "created_at": "2026-11-14T09:47:03.000000Z",
+     "updated_at": "2026-11-14T09:47:03.000000Z",
+     "image": "http://127.0.0.1:8000/images/places/lekki-conservation-centre.jpg"
+    }
+   }
+  ]
+ },
+ "GET /rider/wallet": {
+  "data": {
+   "balance": 40000,
+   "currency": "NGN",
+   "loyalty_points": 950,
+   "referral_code": "OLIV0008",
+   "recent": [
+    {
+     "id": 55,
+     "reference": "TX-QK1LXX",
+     "owner_type": "rider",
+     "owner_id": 8,
+     "subject_type": "trip",
+     "subject_id": 30,
+     "type": "charge",
+     "direction": "debit",
+     "amount": 2901,
+     "method": "card",
+     "status": "succeeded",
+     "description": "Ride CB-SRBMIP",
+     "meta": null,
+     "created_at": "2026-11-14T11:51:00.000000Z",
+     "updated_at": "2026-11-14T09:47:04.000000Z"
+    },
+    {
+     "id": 226,
+     "reference": "TX-TI2DQI",
+     "owner_type": "rider",
+     "owner_id": 8,
+     "subject_type": "tour_booking",
+     "subject_id": 59,
+     "type": "charge",
+     "direction": "debit",
+     "amount": 90000,
+     "method": "card",
+     "status": "succeeded",
+     "description": "Tour TR-R9OOZ2",
+     "meta": null,
+     "created_at": "2026-11-14T09:47:05.000000Z",
+     "updated_at": "2026-11-14T09:47:05.000000Z"
+    },
+    {
+     "id": 227,
+     "reference": "TX-D3QBSC",
+     "owner_type": "rider",
+     "owner_id": 8,
+     "subject_type": "tour_booking",
+     "subject_id": 60,
+     "type": "wallet_payment",
+     "direction": "debit",
+     "amount": 60000,
+     "method": "wallet",
+     "status": "succeeded",
+     "description": "Tour TR-Q7LMVC",
+     "meta": null,
+     "created_at": "2026-11-14T09:47:05.000000Z",
+     "updated_at": "2026-11-14T09:47:05.000000Z"
+    },
+    {
+     "id": 231,
+     "reference": "TX-QPNJCB",
+     "owner_type": "rider",
+     "owner_id": 8,
+     "subject_type": "tour_booking",
+     "subject_id": 64,
+     "type": "charge",
+     "direction": "debit",
+     "amount": 36000,
+     "method": "card",
+     "status": "succeeded",
+     "description": "Tour TR-MXGJYP",
+     "meta": null,
+     "created_at": "2026-11-14T09:47:05.000000Z",
+     "updated_at": "2026-11-14T09:47:05.000000Z"
+    },
+    {
+     "id": 282,
+     "reference": "TX-SHUSAA",
+     "owner_type": "rider",
+     "owner_id": 8,
+     "subject_type": null,
+     "subject_id": null,
+     "type": "wallet_topup",
+     "direction": "credit",
+     "amount": 50000,
+     "method": "card",
+     "status": "succeeded",
+     "description": "Wallet top-up",
+     "meta": null,
+     "created_at": "2026-11-14T09:47:05.000000Z",
+     "updated_at": "2026-11-14T09:47:05.000000Z"
+    }
+   ]
+  }
+ },
+ "GET /rider/wallet/transactions": {
+  "current_page": 1,
+  "data": [
+   {
+    "id": 55,
+    "reference": "TX-QK1LXX",
+    "owner_type": "rider",
+    "owner_id": 8,
+    "subject_type": "trip",
+    "subject_id": 30,
+    "type": "charge",
+    "direction": "debit",
+    "amount": 2901,
+    "method": "card",
+    "status": "succeeded",
+    "description": "Ride CB-SRBMIP",
+    "meta": null,
+    "created_at": "2026-11-14T11:51:00.000000Z",
+    "updated_at": "2026-11-14T09:47:04.000000Z"
+   },
+   {
+    "id": 226,
+    "reference": "TX-TI2DQI",
+    "owner_type": "rider",
+    "owner_id": 8,
+    "subject_type": "tour_booking",
+    "subject_id": 59,
+    "type": "charge",
+    "direction": "debit",
+    "amount": 90000,
+    "method": "card",
+    "status": "succeeded",
+    "description": "Tour TR-R9OOZ2",
+    "meta": null,
+    "created_at": "2026-11-14T09:47:05.000000Z",
+    "updated_at": "2026-11-14T09:47:05.000000Z"
+   },
+   {
+    "id": 227,
+    "reference": "TX-D3QBSC",
+    "owner_type": "rider",
+    "owner_id": 8,
+    "subject_type": "tour_booking",
+    "subject_id": 60,
+    "type": "wallet_payment",
+    "direction": "debit",
+    "amount": 60000,
+    "method": "wallet",
+    "status": "succeeded",
+    "description": "Tour TR-Q7LMVC",
+    "meta": null,
+    "created_at": "2026-11-14T09:47:05.000000Z",
+    "updated_at": "2026-11-14T09:47:05.000000Z"
+   },
+   {
+    "id": 231,
+    "reference": "TX-QPNJCB",
+    "owner_type": "rider",
+    "owner_id": 8,
+    "subject_type": "tour_booking",
+    "subject_id": 64,
+    "type": "charge",
+    "direction": "debit",
+    "amount": 36000,
+    "method": "card",
+    "status": "succeeded",
+    "description": "Tour TR-MXGJYP",
+    "meta": null,
+    "created_at": "2026-11-14T09:47:05.000000Z",
+    "updated_at": "2026-11-14T09:47:05.000000Z"
+   },
+   {
+    "id": 282,
+    "reference": "TX-SHUSAA",
+    "owner_type": "rider",
+    "owner_id": 8,
+    "subject_type": null,
+    "subject_id": null,
+    "type": "wallet_topup",
+    "direction": "credit",
+    "amount": 50000,
+    "method": "card",
+    "status": "succeeded",
+    "description": "Wallet top-up",
+    "meta": null,
+    "created_at": "2026-11-14T09:47:05.000000Z",
+    "updated_at": "2026-11-14T09:47:05.000000Z"
+   },
+   {
+    "id": 166,
+    "reference": "TX-NQGNCQ",
+    "owner_type": "rider",
+    "owner_id": 8,
+    "subject_type": "shuttle_booking",
+    "subject_id": 4,
+    "type": "charge",
+    "direction": "debit",
+    "amount": 45000,
+    "method": "card",
+    "status": "succeeded",
+    "description": "Airport shuttle SH-JUS4MC",
+    "meta": null,
+    "created_at": "2026-11-14T09:47:04.000000Z",
+    "updated_at": "2026-11-14T09:47:04.000000Z"
+   },
+   {
+    "id": 142,
+    "reference": "TX-UIGYBH",
+    "owner_type": "rider",
+    "owner_id": 8,
+    "subject_type": "trip",
+    "subject_id": 80,
+    "type": "charge",
+    "direction": "debit",
+    "amount": 1850,
+    "method": "card",
+    "status": "succeeded",
+    "description": "Ride CB-RLOBDO",
+    "meta": null,
+    "created_at": "2026-11-11T13:29:00.000000Z",
+    "updated_at": "2026-11-14T09:47:04.000000Z"
+   },
+   {
+    "id": 35,
+    "reference": "TX-DLSVBV",
+    "owner_type": "rider",
+    "owner_id": 8,
+    "subject_type": "trip",
+    "subject_id": 20,
+    "type": "charge",
+    "direction": "debit",
+    "amount": 1500,
+    "method": "wallet",
+    "status": "succeeded",
+    "description": "Ride CB-B2P0HT",
+    "meta": null,
+    "created_at": "2026-11-10T16:37:00.000000Z",
+    "updated_at": "2026-11-14T09:47:04.000000Z"
+   },
+   {
+    "id": 49,
+    "reference": "TX-YYON3N",
+    "owner_type": "rider",
+    "owner_id": 8,
+    "subject_type": "trip",
+    "subject_id": 27,
+    "type": "charge",
+    "direction": "debit",
+    "amount": 4660,
+    "method": "card",
+    "status": "succeeded",
+    "description": "Ride CB-PUIUOC",
+    "meta": null,
+    "created_at": "2026-11-10T13:06:00.000000Z",
+    "updated_at": "2026-11-14T09:47:04.000000Z"
+   },
+   {
+    "id": 89,
+    "reference": "TX-AT6DDA",
+    "owner_type": "rider",
+    "owner_id": 8,
+    "subject_type": "trip",
+    "subject_id": 49,
+    "type": "charge",
+    "direction": "debit",
+    "amount": 2154,
+    "method": "bank_transfer",
+    "status": "succeeded",
+    "description": "Ride CB-ETJLWO",
+    "meta": null,
+    "created_at": "2026-11-08T22:38:00.000000Z",
+    "updated_at": "2026-11-14T09:47:04.000000Z"
+   },
+   {
+    "id": 43,
+    "reference": "TX-GXERXF",
+    "owner_type": "rider",
+    "owner_id": 8,
+    "subject_type": "trip",
+    "subject_id": 24,
+    "type": "charge",
+    "direction": "debit",
+    "amount": 4082,
+    "method": "wallet",
+    "status": "succeeded",
+    "description": "Ride CB-EHXB0Y",
+    "meta": null,
+    "created_at": "2026-11-07T22:32:00.000000Z",
+    "updated_at": "2026-11-14T09:47:04.000000Z"
+   },
+   {
+    "id": 138,
+    "reference": "TX-U5ZLPU",
+    "owner_type": "rider",
+    "owner_id": 8,
+    "subject_type": "trip",
+    "subject_id": 78,
+    "type": "charge",
+    "direction": "debit",
+    "amount": 11944,
+    "method": "card",
+    "status": "succeeded",
+    "description": "Ride CB-8VW6M2",
+    "meta": null,
+    "created_at": "2026-11-04T23:37:00.000000Z",
+    "updated_at": "2026-11-14T09:47:04.000000Z"
+   },
+   {
+    "id": 45,
+    "reference": "TX-X3QWXP",
+    "owner_type": "rider",
+    "owner_id": 8,
+    "subject_type": "trip",
+    "subject_id": 25,
+    "type": "charge",
+    "direction": "debit",
+    "amount": 4200,
+    "method": "card",
+    "status": "succeeded",
+    "description": "Ride CB-L0VQAX",
+    "meta": null,
+    "created_at": "2026-10-30T19:22:00.000000Z",
+    "updated_at": "2026-11-14T09:47:04.000000Z"
+   }
+  ],
+  "first_page_url": "http://127.0.0.1:8000/api/v1/rider/wallet/transactions?page=1",
+  "from": 1,
+  "last_page": 1,
+  "last_page_url": "http://127.0.0.1:8000/api/v1/rider/wallet/transactions?page=1",
+  "links": [
+   {
+    "url": null,
+    "label": "&laquo; Previous",
+    "page": null,
+    "active": false
+   },
+   {
+    "url": "http://127.0.0.1:8000/api/v1/rider/wallet/transactions?page=1",
+    "label": "1",
+    "page": 1,
+    "active": true
+   },
+   {
+    "url": null,
+    "label": "Next &raquo;",
+    "page": null,
+    "active": false
+   }
+  ],
+  "next_page_url": null,
+  "path": "http://127.0.0.1:8000/api/v1/rider/wallet/transactions",
+  "per_page": 30,
+  "prev_page_url": null,
+  "to": 13,
+  "total": 13
+ },
+ "GET /rider/saved-places": {
+  "data": [
+   {
+    "id": 5,
+    "rider_id": 8,
+    "label": "Hotel",
+    "address": "Eko Hotel & Suites, Victoria Island",
+    "lat": 6.4268,
+    "lng": 3.429,
+    "created_at": "2026-11-14T13:55:19.000000Z",
+    "updated_at": "2026-11-14T13:55:19.000000Z"
+   }
+  ]
+ },
+ "GET /rider/emergency-contacts": {
+  "data": [
+   {
+    "id": 4,
+    "rider_id": 8,
+    "name": "Kemi Hughes",
+    "phone": "+447700900118",
+    "relationship": "Partner",
+    "share_trips_automatically": false,
+    "created_at": "2026-11-14T13:55:19.000000Z",
+    "updated_at": "2026-11-14T13:55:19.000000Z"
+   }
+  ]
+ },
+ "GET /rider/support/tickets": {
+  "current_page": 1,
+  "data": [
+   {
+    "id": 6,
+    "reference": "ST-GDMBBV",
+    "requester_type": "rider",
+    "requester_id": 8,
+    "subject_type": "trip",
+    "subject_id": 30,
+    "category": "lost_item",
+    "subject_line": "I lost an item",
+    "status": "open",
+    "priority": "normal",
+    "assigned_admin_id": null,
+    "resolved_at": null,
+    "created_at": "2026-11-14T13:55:19.000000Z",
+    "updated_at": "2026-11-14T13:55:19.000000Z",
+    "messages_count": 1
+   }
+  ],
+  "first_page_url": "http://127.0.0.1:8000/api/v1/rider/support/tickets?page=1",
+  "from": 1,
+  "last_page": 1,
+  "last_page_url": "http://127.0.0.1:8000/api/v1/rider/support/tickets?page=1",
+  "links": [
+   {
+    "url": null,
+    "label": "&laquo; Previous",
+    "page": null,
+    "active": false
+   },
+   {
+    "url": "http://127.0.0.1:8000/api/v1/rider/support/tickets?page=1",
+    "label": "1",
+    "page": 1,
+    "active": true
+   },
+   {
+    "url": null,
+    "label": "Next &raquo;",
+    "page": null,
+    "active": false
+   }
+  ],
+  "next_page_url": null,
+  "path": "http://127.0.0.1:8000/api/v1/rider/support/tickets",
+  "per_page": 20,
+  "prev_page_url": null,
+  "to": 1,
+  "total": 1
+ },
+ "GET /rider/notifications": {
+  "current_page": 1,
+  "data": [],
+  "first_page_url": "http://127.0.0.1:8000/api/v1/rider/notifications?page=1",
+  "from": null,
+  "last_page": 1,
+  "last_page_url": "http://127.0.0.1:8000/api/v1/rider/notifications?page=1",
+  "links": [
+   {
+    "url": null,
+    "label": "&laquo; Previous",
+    "page": null,
+    "active": false
+   },
+   {
+    "url": "http://127.0.0.1:8000/api/v1/rider/notifications?page=1",
+    "label": "1",
+    "page": 1,
+    "active": true
+   },
+   {
+    "url": null,
+    "label": "Next &raquo;",
+    "page": null,
+    "active": false
+   }
+  ],
+  "next_page_url": null,
+  "path": "http://127.0.0.1:8000/api/v1/rider/notifications",
+  "per_page": 30,
+  "prev_page_url": null,
+  "to": null,
+  "total": 0,
+  "unread": 0
+ },
+ "GET /attractions/*": {
+  "data": {
+   "id": 5,
+   "name": "Lekki–Ikoyi Link Bridge",
+   "slug": "lekki-ikoyi-link-bridge",
+   "category": "Landmarks",
+   "area": "Ikoyi",
+   "description": "A cable-stayed toll bridge linking Ikoyi and Lekki, best seen at sunset when it is lit up.",
+   "address": "Lekki–Ikoyi Link Bridge",
+   "lat": 6.4449,
+   "lng": 3.4395,
+   "opening_hours": "Open daily",
+   "entry_fee": 0,
+   "visitor_tips": [
+    "Pedestrians can walk the bridge early in the morning",
+    "Sunset photos are best from the Ikoyi end"
+   ],
+   "safety_notes": "Do not stop vehicles on the bridge.",
+   "image_url": "/images/places/lekki-ikoyi-bridge.jpg",
+   "rating": 4.6,
+   "reviews_count": 3100,
+   "is_published": true,
+   "last_reviewed_on": "2026-10-24T00:00:00.000000Z",
+   "created_at": "2026-11-14T09:47:03.000000Z",
+   "updated_at": "2026-11-14T09:47:03.000000Z",
+   "image": "http://127.0.0.1:8000/images/places/lekki-ikoyi-bridge.jpg"
+  }
+ },
+ "GET /tours/*": {
+  "data": {
+   "id": 1,
+   "partner_id": 1,
+   "tour_category_id": 5,
+   "title": "Lekki Conservation Centre",
+   "slug": "lekki-conservation-centre",
+   "description": "Walk the longest canopy walkway in Africa, spot mona monkeys and crocodiles, and learn how the reserve protects Lagos wetlands with a naturalist guide.",
+   "area": "Lekki",
+   "meeting_point": "Lekki Conservation Centre main gate, Km 19 Lekki–Epe Expressway",
+   "meeting_lat": 6.4413,
+   "meeting_lng": 3.5357,
+   "duration_minutes": 240,
+   "price": 15000,
+   "min_group_size": 1,
+   "max_group_size": 10,
+   "languages": [
+    "English",
+    "Yoruba"
+   ],
+   "itinerary": [
+    "Meet your guide at the main gate",
+    "Nature trail and tree house",
+    "Canopy walkway (401 m)",
+    "Family park and picnic stop"
+   ],
+   "inclusions": [
+    "Entry ticket",
+    "Canopy walkway ticket",
+    "Bottled water",
+    "English-speaking guide"
+   ],
+   "exclusions": [
+    "Lunch",
+    "Hotel transfers"
+   ],
+   "addons": [
+    {
+     "code": "photo_pack",
+     "name": "Photo pack (20 edited photos)",
+     "price": 5000
+    },
+    {
+     "code": "lunch",
+     "name": "Picnic lunch",
+     "price": 6000
+    }
+   ],
+   "cancellation_policy": "Free cancellation up to 24 hours before the start. 50% refund within 24 hours. No refund for no-shows.",
+   "image_url": "/images/places/lekki-conservation-centre.jpg",
+   "wheelchair_accessible": false,
+   "rating": 4.8,
+   "reviews_count": 2300,
+   "is_featured": true,
+   "is_published": true,
+   "created_at": "2026-11-14T09:47:03.000000Z",
+   "updated_at": "2026-11-14T09:47:03.000000Z",
+   "image": "http://127.0.0.1:8000/images/places/lekki-conservation-centre.jpg",
+   "category": {
+    "id": 5,
+    "name": "Nature & Wildlife",
+    "slug": "nature-wildlife"
+   },
+   "partner": {
+    "id": 1,
+    "name": "Eko Nature Trails"
+   },
+   "reviews": [
+    {
+     "id": 5,
+     "rider_id": 6,
+     "tour_id": 1,
+     "tour_booking_id": 7,
+     "rating": 4,
+     "comment": "Loved every minute. Bring sunscreen.",
+     "highlights": [
+      "Good value"
+     ],
+     "is_visible": true,
+     "created_at": "2026-11-13T15:00:00.000000Z",
+     "updated_at": "2026-11-14T09:47:04.000000Z",
+     "rider": {
+      "id": 6,
+      "first_name": "Kwame",
+      "last_name": "Mensah",
+      "nationality": "Ghanaian",
+      "name": "Kwame Mensah"
+     }
+    },
+    {
+     "id": 4,
+     "rider_id": 15,
+     "tour_id": 1,
+     "tour_booking_id": 6,
+     "rating": 4,
+     "comment": "Brilliant day out. Well organised and the driver was waiting when we finished.",
+     "highlights": [
+      "Good value"
+     ],
+     "is_visible": true,
+     "created_at": "2026-11-11T20:00:00.000000Z",
+     "updated_at": "2026-11-14T09:47:04.000000Z",
+     "rider": {
+      "id": 15,
+      "first_name": "Ngozi",
+      "last_name": "Umeh",
+      "nationality": "Nigerian",
+      "name": "Ngozi Umeh"
+     }
+    },
+    {
+     "id": 3,
+     "rider_id": 1,
+     "tour_id": 1,
+     "tour_booking_id": 5,
+     "rating": 5,
+     "comment": "The highlight of my trip to Lagos.",
+     "highlights": [
+      "Safe"
+     ],
+     "is_visible": true,
+     "created_at": "2026-11-10T15:00:00.000000Z",
+     "updated_at": "2026-11-14T09:47:04.000000Z",
+     "rider": {
+      "id": 1,
+      "first_name": "Tunde",
+      "last_name": "Bakare",
+      "nationality": "British",
+      "name": "Tunde Bakare"
+     }
+    },
+    {
+     "id": 2,
+     "rider_id": 3,
+     "tour_id": 1,
+     "tour_booking_id": 2,
+     "rating": 4,
+     "comment": "The highlight of my trip to Lagos.",
+     "highlights": [
+      "Well organised"
+     ],
+     "is_visible": true,
+     "created_at": "2026-11-05T20:00:00.000000Z",
+     "updated_at": "2026-11-14T09:47:04.000000Z",
+     "rider": {
+      "id": 3,
+      "first_name": "Daniel",
+      "last_name": "Kamau",
+      "nationality": "Kenyan",
+      "name": "Daniel Kamau"
+     }
+    },
+    {
+     "id": 1,
+     "rider_id": 1,
+     "tour_id": 1,
+     "tour_booking_id": 1,
+     "rating": 5,
+     "comment": "Great value and a really friendly group.",
+     "highlights": [
+      "Safe"
+     ],
+     "is_visible": true,
+     "created_at": "2026-11-04T15:00:00.000000Z",
+     "updated_at": "2026-11-14T09:47:04.000000Z",
+     "rider": {
+      "id": 1,
+      "first_name": "Tunde",
+      "last_name": "Bakare",
+      "nationality": "British",
+      "name": "Tunde Bakare"
+     }
+    }
+   ]
+  }
+ },
+ "GET /rider/trips/*": {
+  "data": {
+   "id": 30,
+   "reference": "CB-SRBMIP",
+   "rider_id": 8,
+   "driver_id": 8,
+   "vehicle_id": 8,
+   "ride_type_id": 1,
+   "status": "completed",
+   "pickup_address": "Ikoyi Club 1938, Ikoyi",
+   "pickup_lat": 6.452,
+   "pickup_lng": 3.43,
+   "dropoff_address": "Shoprite Surulere, Adeniran Ogunsanya",
+   "dropoff_lat": 6.493,
+   "dropoff_lng": 3.357,
+   "stops": null,
+   "scheduled_at": null,
+   "pin": "5220",
+   "distance_km": 12.51,
+   "duration_minutes": 35,
+   "surge_multiplier": 1,
+   "fare_base": 700,
+   "fare_distance": 1501,
+   "fare_time": 700,
+   "fare_stops": 0,
+   "tolls": 0,
+   "discount": 0,
+   "fare_total": 2901,
+   "tip": 0,
+   "commission": 580,
+   "driver_earnings": 2321,
+   "cancellation_fee": 0,
+   "promo_code_id": null,
+   "payment_method": "card",
+   "payment_status": "paid",
+   "cancelled_by": null,
+   "cancellation_reason": null,
+   "rider_rating": null,
+   "driver_rating": 5,
+   "rider_feedback": null,
+   "driver_feedback": null,
+   "share_token": null,
+   "accepted_at": "2026-11-14T11:08:00.000000Z",
+   "arrived_at": "2026-11-14T11:14:00.000000Z",
+   "started_at": "2026-11-14T11:16:00.000000Z",
+   "completed_at": "2026-11-14T11:51:00.000000Z",
+   "cancelled_at": null,
+   "created_at": "2026-11-14T11:07:00.000000Z",
+   "updated_at": "2026-11-14T11:07:00.000000Z",
+   "driver": {
+    "id": 8,
+    "first_name": "Halima",
+    "last_name": "Sani",
+    "photo_url": null,
+    "rating": 4.38,
+    "languages": [
+     "English",
+     "Igbo"
+    ],
+    "name": "Halima Sani"
+   },
+   "vehicle": {
+    "id": 8,
+    "make": "Hyundai",
+    "model": "Elantra",
+    "year": 2020,
+    "colour": "Silver",
+    "plate_number": "IKD 318 MN",
+    "seats": 4
+   },
+   "ride_type": {
+    "id": 1,
+    "code": "economy",
+    "name": "Economy"
+   },
+   "waiting_fee": 0
+  }
+ },
+ "GET /rider/shuttles/*": {
+  "data": {
+   "id": 4,
+   "reference": "SH-JUS4MC",
+   "rider_id": 8,
+   "driver_id": 6,
+   "direction": "airport_pickup",
+   "airport": "Murtala Muhammed International (LOS)",
+   "terminal": "Terminal 2 (International)",
+   "flight_number": "VS411",
+   "flight_time": "2026-11-15T06:05:00.000000Z",
+   "flight_status": "scheduled",
+   "pickup_at": "2026-11-15T06:50:00.000000Z",
+   "address": "Admiralty Way, Lekki Phase 1",
+   "lat": 6.4474,
+   "lng": 3.4728,
+   "ride_type_id": 4,
+   "passengers": 2,
+   "large_bags": 3,
+   "small_bags": 2,
+   "price": 45000,
+   "driver_payout": 36000,
+   "meeting_point": "Arrivals hall exit, by the Cabo sign at Pillar 3",
+   "name_board": "HUGHES",
+   "notes": null,
+   "payment_method": "card",
+   "payment_status": "paid",
+   "status": "driver_assigned",
+   "driver_assigned_at": "2026-11-13T09:47:04.000000Z",
+   "created_at": "2026-11-06T09:47:04.000000Z",
+   "updated_at": "2026-11-14T09:47:04.000000Z",
+   "driver": {
+    "id": 6,
+    "first_name": "Olumide",
+    "last_name": "Fashola",
+    "photo_url": null,
+    "rating": 4.8,
+    "phone": "+2348012345683",
+    "name": "Olumide Fashola",
+    "active_vehicle": {
+     "id": 6,
+     "driver_id": 6,
+     "make": "Lexus",
+     "model": "RX 350",
+     "colour": "Black",
+     "plate_number": "LND 207 PR"
+    }
+   },
+   "ride_type": {
+    "id": 4,
+    "code": "premium",
+    "name": "Premium"
+   }
+  }
+ },
+ "GET /rider/tour-bookings/*": {
+  "data": {
+   "id": 60,
+   "reference": "TR-Q7LMVC",
+   "rider_id": 8,
+   "tour_id": 5,
+   "tour_slot_id": 172,
+   "guests": 2,
+   "subtotal": 60000,
+   "addons": [],
+   "addons_total": 0,
+   "ride_addon_price": 0,
+   "ride_trip_id": null,
+   "promo_code_id": null,
+   "discount": 0,
+   "total": 60000,
+   "payment_method": "wallet",
+   "payment_status": "paid",
+   "refund_amount": 0,
+   "status": "confirmed",
+   "qr_token": "3D7hGMvP02LgIRFlYOTAg63q3TMF6WT6",
+   "company_name": null,
+   "checked_in_at": null,
+   "cancelled_at": null,
+   "created_at": "2026-11-23T09:00:00.000000Z",
+   "updated_at": "2026-11-14T09:47:05.000000Z",
+   "tour": {
+    "id": 5,
+    "partner_id": 5,
+    "tour_category_id": 4,
+    "title": "Victoria Island Nightlife",
+    "slug": "victoria-island-nightlife",
+    "description": "See Lagos after dark with a host: a rooftop sunset, Afrobeats live music and a well-known club, with a vetted Cabo ride between every stop.",
+    "area": "Victoria Island",
+    "meeting_point": "Eko Hotel roundabout, Victoria Island",
+    "meeting_lat": 6.4268,
+    "meeting_lng": 3.429,
+    "duration_minutes": 300,
+    "price": 30000,
+    "min_group_size": 2,
+    "max_group_size": 10,
+    "languages": [
+     "English",
+     "Yoruba"
+    ],
+    "itinerary": [
+     "Rooftop sunset drinks",
+     "Live Afrobeats bar",
+     "Club entry with table",
+     "Cabo ride home"
+    ],
+    "inclusions": [
+     "Host",
+     "Two welcome drinks",
+     "Club entry",
+     "Rides between venues"
+    ],
+    "exclusions": [
+     "Extra drinks",
+     "Food"
+    ],
+    "addons": [
+     {
+      "code": "photo_pack",
+      "name": "Photo pack (20 edited photos)",
+      "price": 5000
+     }
+    ],
+    "cancellation_policy": "Free cancellation up to 24 hours before the start. 50% refund within 24 hours. No refund for no-shows.",
+    "image_url": "/images/places/lagos-at-night.jpg",
+    "wheelchair_accessible": true,
+    "rating": 4.5,
+    "reviews_count": 320,
+    "is_featured": false,
+    "is_published": true,
+    "created_at": "2026-11-14T09:47:03.000000Z",
+    "updated_at": "2026-11-14T09:47:03.000000Z",
+    "image": "http://127.0.0.1:8000/images/places/lagos-at-night.jpg"
+   },
+   "slot": {
+    "id": 172,
+    "tour_id": 5,
+    "starts_at": "2026-11-25T09:00:00.000000Z",
+    "capacity": 10,
+    "booked": 2,
+    "guide_driver_id": null,
+    "created_at": "2026-11-14T09:47:03.000000Z",
+    "updated_at": "2026-11-14T09:47:05.000000Z",
+    "remaining": 8
+   },
+   "review": null
+  }
+ },
+ "GET /rider/support/tickets/*": {
+  "data": {
+   "id": 6,
+   "reference": "ST-GDMBBV",
+   "requester_type": "rider",
+   "requester_id": 8,
+   "subject_type": "trip",
+   "subject_id": 30,
+   "category": "lost_item",
+   "subject_line": "I lost an item",
+   "status": "open",
+   "priority": "normal",
+   "assigned_admin_id": null,
+   "resolved_at": null,
+   "created_at": "2026-11-14T13:55:19.000000Z",
+   "updated_at": "2026-11-14T13:55:19.000000Z",
+   "messages": [
+    {
+     "id": 9,
+     "support_ticket_id": 6,
+     "sender_id": 8,
+     "body": "Left a black camera bag on the back seat.",
+     "created_at": "2026-11-14T13:55:19.000000Z",
+     "updated_at": "2026-11-14T13:55:19.000000Z",
+     "sender_role": "rider"
+    }
+   ],
+   "subject": {
+    "id": 30,
+    "reference": "CB-SRBMIP",
+    "rider_id": 8,
+    "driver_id": 8,
+    "vehicle_id": 8,
+    "ride_type_id": 1,
+    "status": "completed",
+    "pickup_address": "Ikoyi Club 1938, Ikoyi",
+    "pickup_lat": 6.452,
+    "pickup_lng": 3.43,
+    "dropoff_address": "Shoprite Surulere, Adeniran Ogunsanya",
+    "dropoff_lat": 6.493,
+    "dropoff_lng": 3.357,
+    "stops": null,
+    "scheduled_at": null,
+    "pin": "5220",
+    "distance_km": 12.51,
+    "duration_minutes": 35,
+    "surge_multiplier": 1,
+    "fare_base": 700,
+    "fare_distance": 1501,
+    "fare_time": 700,
+    "fare_stops": 0,
+    "tolls": 0,
+    "discount": 0,
+    "fare_total": 2901,
+    "tip": 0,
+    "commission": 580,
+    "driver_earnings": 2321,
+    "cancellation_fee": 0,
+    "promo_code_id": null,
+    "payment_method": "card",
+    "payment_status": "paid",
+    "cancelled_by": null,
+    "cancellation_reason": null,
+    "rider_rating": null,
+    "driver_rating": 5,
+    "rider_feedback": null,
+    "driver_feedback": null,
+    "share_token": null,
+    "accepted_at": "2026-11-14T11:08:00.000000Z",
+    "arrived_at": "2026-11-14T11:14:00.000000Z",
+    "started_at": "2026-11-14T11:16:00.000000Z",
+    "completed_at": "2026-11-14T11:51:00.000000Z",
+    "cancelled_at": null,
+    "created_at": "2026-11-14T11:07:00.000000Z",
+    "updated_at": "2026-11-14T11:07:00.000000Z"
+   }
+  }
+ },
+ "POST /rider/fare-estimates": {
+  "data": [
+   {
+    "ride_type": "economy",
+    "distance_km": 3.14,
+    "duration_minutes": 9,
+    "zone": "Victoria Island",
+    "surge_multiplier": 1.2,
+    "fare_base": 700,
+    "fare_distance": 377,
+    "fare_time": 180,
+    "fare_stops": 0,
+    "tolls": 0,
+    "discount": 0,
+    "fare_total": 1508,
+    "currency": "NGN",
+    "name": "Economy",
+    "seats": 4,
+    "description": "Affordable everyday rides"
+   },
+   {
+    "ride_type": "comfort",
+    "distance_km": 3.14,
+    "duration_minutes": 9,
+    "zone": "Victoria Island",
+    "surge_multiplier": 1.2,
+    "fare_base": 1000,
+    "fare_distance": 534,
+    "fare_time": 252,
+    "fare_stops": 0,
+    "tolls": 0,
+    "discount": 0,
+    "fare_total": 2200,
+    "currency": "NGN",
+    "name": "Comfort",
+    "seats": 4,
+    "description": "Newer cars with extra legroom"
+   },
+   {
+    "ride_type": "suv",
+    "distance_km": 3.14,
+    "duration_minutes": 9,
+    "zone": "Victoria Island",
+    "surge_multiplier": 1.2,
+    "fare_base": 1500,
+    "fare_distance": 754,
+    "fare_time": 342,
+    "fare_stops": 0,
+    "tolls": 0,
+    "discount": 0,
+    "fare_total": 3200,
+    "currency": "NGN",
+    "name": "SUV",
+    "seats": 6,
+    "description": "Room for six and their luggage"
+   },
+   {
+    "ride_type": "premium",
+    "distance_km": 3.14,
+    "duration_minutes": 9,
+    "zone": "Victoria Island",
+    "surge_multiplier": 1.2,
+    "fare_base": 2200,
+    "fare_distance": 1130,
+    "fare_time": 495,
+    "fare_stops": 0,
+    "tolls": 0,
+    "discount": 0,
+    "fare_total": 4800,
+    "currency": "NGN",
+    "name": "Premium",
+    "seats": 4,
+    "description": "Top-rated drivers in executive cars"
+   }
+  ]
+ },
+ "GET /tours/*/slots": {
+  "data": [
+   {
+    "id": 22,
+    "tour_id": 1,
+    "starts_at": "2026-11-14T14:00:00.000000Z",
+    "capacity": 10,
+    "booked": 1,
+    "remaining": 9
+   },
+   {
+    "id": 23,
+    "tour_id": 1,
+    "starts_at": "2026-11-15T09:00:00.000000Z",
+    "capacity": 10,
+    "booked": 0,
+    "remaining": 10
+   },
+   {
+    "id": 24,
+    "tour_id": 1,
+    "starts_at": "2026-11-15T14:00:00.000000Z",
+    "capacity": 10,
+    "booked": 0,
+    "remaining": 10
+   },
+   {
+    "id": 25,
+    "tour_id": 1,
+    "starts_at": "2026-11-16T09:00:00.000000Z",
+    "capacity": 10,
+    "booked": 1,
+    "remaining": 9
+   },
+   {
+    "id": 26,
+    "tour_id": 1,
+    "starts_at": "2026-11-16T14:00:00.000000Z",
+    "capacity": 10,
+    "booked": 0,
+    "remaining": 10
+   },
+   {
+    "id": 27,
+    "tour_id": 1,
+    "starts_at": "2026-11-17T09:00:00.000000Z",
+    "capacity": 10,
+    "booked": 0,
+    "remaining": 10
+   },
+   {
+    "id": 28,
+    "tour_id": 1,
+    "starts_at": "2026-11-17T14:00:00.000000Z",
+    "capacity": 10,
+    "booked": 2,
+    "remaining": 8
+   },
+   {
+    "id": 29,
+    "tour_id": 1,
+    "starts_at": "2026-11-18T09:00:00.000000Z",
+    "capacity": 10,
+    "booked": 0,
+    "remaining": 10
+   },
+   {
+    "id": 30,
+    "tour_id": 1,
+    "starts_at": "2026-11-18T14:00:00.000000Z",
+    "capacity": 10,
+    "booked": 0,
+    "remaining": 10
+   },
+   {
+    "id": 31,
+    "tour_id": 1,
+    "starts_at": "2026-11-19T09:00:00.000000Z",
+    "capacity": 10,
+    "booked": 2,
+    "remaining": 8
+   },
+   {
+    "id": 32,
+    "tour_id": 1,
+    "starts_at": "2026-11-19T14:00:00.000000Z",
+    "capacity": 10,
+    "booked": 0,
+    "remaining": 10
+   },
+   {
+    "id": 33,
+    "tour_id": 1,
+    "starts_at": "2026-11-20T09:00:00.000000Z",
+    "capacity": 10,
+    "booked": 0,
+    "remaining": 10
+   },
+   {
+    "id": 34,
+    "tour_id": 1,
+    "starts_at": "2026-11-20T14:00:00.000000Z",
+    "capacity": 10,
+    "booked": 2,
+    "remaining": 8
+   },
+   {
+    "id": 35,
+    "tour_id": 1,
+    "starts_at": "2026-11-21T09:00:00.000000Z",
+    "capacity": 10,
+    "booked": 0,
+    "remaining": 10
+   },
+   {
+    "id": 36,
+    "tour_id": 1,
+    "starts_at": "2026-11-21T14:00:00.000000Z",
+    "capacity": 10,
+    "booked": 0,
+    "remaining": 10
+   },
+   {
+    "id": 37,
+    "tour_id": 1,
+    "starts_at": "2026-11-22T09:00:00.000000Z",
+    "capacity": 10,
+    "booked": 2,
+    "remaining": 8
+   },
+   {
+    "id": 38,
+    "tour_id": 1,
+    "starts_at": "2026-11-22T14:00:00.000000Z",
+    "capacity": 10,
+    "booked": 0,
+    "remaining": 10
+   },
+   {
+    "id": 39,
+    "tour_id": 1,
+    "starts_at": "2026-11-23T09:00:00.000000Z",
+    "capacity": 10,
+    "booked": 0,
+    "remaining": 10
+   },
+   {
+    "id": 40,
+    "tour_id": 1,
+    "starts_at": "2026-11-23T14:00:00.000000Z",
+    "capacity": 10,
+    "booked": 1,
+    "remaining": 9
+   },
+   {
+    "id": 41,
+    "tour_id": 1,
+    "starts_at": "2026-11-24T09:00:00.000000Z",
+    "capacity": 10,
+    "booked": 0,
+    "remaining": 10
+   },
+   {
+    "id": 42,
+    "tour_id": 1,
+    "starts_at": "2026-11-24T14:00:00.000000Z",
+    "capacity": 10,
+    "booked": 0,
+    "remaining": 10
+   },
+   {
+    "id": 43,
+    "tour_id": 1,
+    "starts_at": "2026-11-25T09:00:00.000000Z",
+    "capacity": 10,
+    "booked": 2,
+    "remaining": 8
+   },
+   {
+    "id": 44,
+    "tour_id": 1,
+    "starts_at": "2026-11-25T14:00:00.000000Z",
+    "capacity": 10,
+    "booked": 0,
+    "remaining": 10
+   },
+   {
+    "id": 45,
+    "tour_id": 1,
+    "starts_at": "2026-11-26T09:00:00.000000Z",
+    "capacity": 10,
+    "booked": 0,
+    "remaining": 10
+   },
+   {
+    "id": 46,
+    "tour_id": 1,
+    "starts_at": "2026-11-26T14:00:00.000000Z",
+    "capacity": 10,
+    "booked": 3,
+    "remaining": 7
+   },
+   {
+    "id": 47,
+    "tour_id": 1,
+    "starts_at": "2026-11-27T09:00:00.000000Z",
+    "capacity": 10,
+    "booked": 0,
+    "remaining": 10
+   },
+   {
+    "id": 48,
+    "tour_id": 1,
+    "starts_at": "2026-11-27T14:00:00.000000Z",
+    "capacity": 10,
+    "booked": 0,
+    "remaining": 10
+   },
+   {
+    "id": 49,
+    "tour_id": 1,
+    "starts_at": "2026-11-28T09:00:00.000000Z",
+    "capacity": 10,
+    "booked": 3,
+    "remaining": 7
+   },
+   {
+    "id": 50,
+    "tour_id": 1,
+    "starts_at": "2026-11-28T14:00:00.000000Z",
+    "capacity": 10,
+    "booked": 0,
+    "remaining": 10
+   }
+  ]
+ },
+ "GET /places?kind=attraction": {
+  "data": [
+   {
+    "name": "Lekki Conservation Centre",
+    "address": "Km 19 Lekki–Epe Expressway, Lekki",
+    "lat": 6.4413,
+    "lng": 3.5357,
+    "kind": "attraction"
+   },
+   {
+    "name": "Nike Art Gallery",
+    "address": "2 Elegushi Road, Lekki Phase 1, Lekki",
+    "lat": 6.4371,
+    "lng": 3.4848,
+    "kind": "attraction"
+   },
+   {
+    "name": "Tarkwa Bay Beach",
+    "address": "Tarkwa Bay, reached by boat from Tarzan Jetty, Lagos Harbour",
+    "lat": 6.4011,
+    "lng": 3.3963,
+    "kind": "attraction"
+   },
+   {
+    "name": "Freedom Park",
+    "address": "Broad Street, Lagos Island, Lagos Island",
+    "lat": 6.4527,
+    "lng": 3.3937,
+    "kind": "attraction"
+   },
+   {
+    "name": "Lekki–Ikoyi Link Bridge",
+    "address": "Lekki–Ikoyi Link Bridge, Ikoyi",
+    "lat": 6.4449,
+    "lng": 3.4395,
+    "kind": "attraction"
+   },
+   {
+    "name": "Elegushi Beach",
+    "address": "Elegushi Royal Beach, Lekki Phase 1, Lekki",
+    "lat": 6.4322,
+    "lng": 3.493,
+    "kind": "attraction"
+   },
+   {
+    "name": "Kalakuta Republic Museum",
+    "address": "7 Gbemisola Street, Ikeja, Ikeja",
+    "lat": 6.5915,
+    "lng": 3.3517,
+    "kind": "attraction"
+   },
+   {
+    "name": "Terra Kulture",
+    "address": "1376 Tiamiyu Savage Street, Victoria Island, Victoria Island",
+    "lat": 6.4335,
+    "lng": 3.4229,
+    "kind": "attraction"
+   }
+  ]
+ }
+}

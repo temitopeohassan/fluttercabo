@@ -2,10 +2,11 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import '../data.dart';
+import '../api/api_client.dart';
+import '../format.dart';
+import 'live.dart';
 import '../theme.dart';
 import 'common.dart';
-import 'scenes.dart';
 
 /// Rounded search field like the one on the home screen.
 class SearchBox extends StatelessWidget {
@@ -48,7 +49,9 @@ class SearchBox extends StatelessWidget {
 /// Photo card with a title underneath, as in "Popular Destinations".
 class DestinationCard extends StatelessWidget {
   const DestinationCard(this.place, {super.key, this.width = 130, this.onTap});
-  final Place place;
+
+  /// An attraction from the API.
+  final Json place;
   final double width;
   final VoidCallback? onTap;
 
@@ -61,10 +64,17 @@ class DestinationCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Scene(place.scene, height: width * 0.85, radius: 16),
+            NetPhoto(
+              AppScope.read(context).imageUrl(place),
+              fallback: sceneFor(
+                '${place.str('category')} ${place.str('name')}',
+              ),
+              height: width * 0.85,
+              radius: 16,
+            ),
             const SizedBox(height: 8),
             Text(
-              place.name,
+              place.str('name'),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: CaboText.body.copyWith(
@@ -82,8 +92,17 @@ class DestinationCard extends StatelessWidget {
 
 /// List row for a tour: thumbnail, name, rating and price.
 class TourTile extends StatelessWidget {
-  const TourTile(this.tour, {super.key, this.onTap, this.saved = false});
-  final Tour tour;
+  const TourTile(
+    this.tour, {
+    super.key,
+    this.onTap,
+    this.saved = false,
+    this.onSave,
+  });
+
+  /// A tour from the API.
+  final Json tour;
+  final VoidCallback? onSave;
   final VoidCallback? onTap;
   final bool saved;
 
@@ -99,7 +118,14 @@ class TourTile extends StatelessWidget {
             SizedBox(
               width: 96,
               height: 96,
-              child: Scene(tour.scene, radius: 14, height: 96),
+              child: NetPhoto(
+                AppScope.read(context).imageUrl(tour),
+                fallback: sceneFor(
+                  '${tour.obj('category')?.str('name')} ${tour.str('title')}',
+                ),
+                radius: 14,
+                height: 96,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -107,14 +133,15 @@ class TourTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    tour.category.toUpperCase(),
+                    (tour.obj('category')?.str('name') ?? tour.str('area'))
+                        .toUpperCase(),
                     style: CaboText.label.copyWith(
                       color: CaboColors.green,
                       fontSize: 10,
                     ),
                   ),
                   Text(
-                    tour.name,
+                    tour.str('title'),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: CaboText.h3.copyWith(fontSize: 15),
@@ -129,7 +156,9 @@ class TourTile extends StatelessWidget {
                       ),
                       const SizedBox(width: 3),
                       Text(
-                        '${tour.rating} (${tour.reviews})',
+                        tour.numberOrNull('rating') == null
+                            ? 'New'
+                            : '${tour.number('rating').toStringAsFixed(1)} (${compact(tour.integer('reviews_count'))})',
                         style: CaboText.label,
                       ),
                       const SizedBox(width: 8),
@@ -141,7 +170,7 @@ class TourTile extends StatelessWidget {
                       const SizedBox(width: 3),
                       Flexible(
                         child: Text(
-                          tour.duration,
+                          fmtDuration(tour.integer('duration_minutes')),
                           overflow: TextOverflow.ellipsis,
                           style: CaboText.label,
                         ),
@@ -151,7 +180,7 @@ class TourTile extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text.rich(
                     TextSpan(
-                      text: naira(tour.price),
+                      text: naira(tour.integer('price')),
                       style: CaboText.h3.copyWith(color: CaboColors.green),
                       children: [
                         TextSpan(text: ' / person', style: CaboText.label),
@@ -161,9 +190,13 @@ class TourTile extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(
-              saved ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-              color: saved ? CaboColors.red : CaboColors.muted,
+            IconButton(
+              tooltip: saved ? 'Remove from wishlist' : 'Save to wishlist',
+              onPressed: onSave,
+              icon: Icon(
+                saved ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                color: saved ? CaboColors.red : CaboColors.muted,
+              ),
             ),
           ],
         ),
@@ -248,6 +281,7 @@ class RideOption extends StatelessWidget {
     required this.onTap,
     this.seats = 4,
     this.surge,
+    this.homeFare = '',
   });
 
   final String name;
@@ -258,6 +292,9 @@ class RideOption extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
   final String? surge;
+
+  /// The fare in the guest's home currency, e.g. "≈ £1.75".
+  final String homeFare;
 
   @override
   Widget build(BuildContext context) {
@@ -309,7 +346,8 @@ class RideOption extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(naira(fare), style: CaboText.h3),
-                    Text(gbp(fare), style: CaboText.label),
+                    if (homeFare.isNotEmpty)
+                      Text(homeFare, style: CaboText.label),
                   ],
                 ),
               ],
@@ -321,7 +359,7 @@ class RideOption extends StatelessWidget {
   }
 }
 
-/// A QR-code-like pattern for tickets (decorative, not scannable).
+/// A QR-code-like pattern, used only as a placeholder in design previews.
 class FakeQr extends StatelessWidget {
   const FakeQr({super.key, this.size = 200, this.seed = 42});
   final double size;
@@ -376,14 +414,22 @@ class _QrPainter extends CustomPainter {
 
 /// Driver summary used on the match and trip screens.
 class DriverCard extends StatelessWidget {
-  const DriverCard({super.key, this.actions = true});
+  const DriverCard(this.trip, {super.key, this.actions = true});
+
+  /// A trip from the API, with its `driver` and `vehicle`.
+  final Json trip;
   final bool actions;
 
   @override
   Widget build(BuildContext context) {
+    final driver = trip.obj('driver') ?? const {};
+    final vehicle = trip.obj('vehicle') ?? const {};
+    final name = driver.str('first_name', 'Your driver');
+    final last = driver.str('last_name');
+    final rating = driver.numberOrNull('rating');
     return Row(
       children: [
-        const Avatar('EN', size: 54),
+        Avatar(initials('$name $last'), size: 54),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -391,50 +437,60 @@ class DriverCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Text('Emeka N.', style: CaboText.h3),
-                  const SizedBox(width: 6),
-                  const Icon(
-                    Icons.star_rounded,
-                    size: 16,
-                    color: CaboColors.yellow,
+                  Flexible(
+                    child: Text(
+                      last.isEmpty ? name : '$name ${last[0]}.',
+                      overflow: TextOverflow.ellipsis,
+                      style: CaboText.h3,
+                    ),
                   ),
-                  Text('4.92', style: CaboText.label),
+                  if (rating != null) ...[
+                    const SizedBox(width: 6),
+                    const Icon(
+                      Icons.star_rounded,
+                      size: 16,
+                      color: CaboColors.yellow,
+                    ),
+                    Text(rating.toStringAsFixed(2), style: CaboText.label),
+                  ],
                 ],
               ),
-              Text('Silver Toyota Corolla', style: CaboText.muted),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: CaboColors.yellowSoft,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: CaboColors.yellow),
+              if (vehicle.isNotEmpty)
+                Text(
+                  '${vehicle.str('colour')} ${vehicle.str('make')} ${vehicle.str('model')}',
+                  style: CaboText.muted,
                 ),
-                child: Text(
-                  'LND 482 KJ',
-                  style: CaboText.label.copyWith(
-                    color: CaboColors.ink,
-                    letterSpacing: 1,
+              if (vehicle.strOrNull('plate_number') != null) ...[
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: CaboColors.yellowSoft,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: CaboColors.yellow),
+                  ),
+                  child: Text(
+                    vehicle.str('plate_number'),
+                    style: CaboText.label.copyWith(
+                      color: CaboColors.ink,
+                      letterSpacing: 1,
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
-        if (actions) ...[
+        if (actions)
           RoundAction(
-            Icons.call_rounded,
+            Icons.shield_rounded,
             color: CaboColors.greenSoft,
             iconColor: CaboColors.green,
+            onTap: () => go(context, '/safety'),
           ),
-          const SizedBox(width: 8),
-          RoundAction(
-            Icons.chat_bubble_rounded,
-            color: CaboColors.greenSoft,
-            iconColor: CaboColors.green,
-            onTap: () => go(context, '/chat-driver'),
-          ),
-        ],
       ],
     );
   }

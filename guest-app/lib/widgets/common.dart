@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
+import 'live.dart';
 
 void go(BuildContext context, String route) =>
     Navigator.of(context).pushNamed(route);
@@ -597,10 +598,12 @@ class SingleChoice extends StatefulWidget {
     required this.options,
     this.initial = 0,
     this.icons,
+    this.onChanged,
   });
   final List<(String, String?)> options;
   final List<IconData>? icons;
   final int initial;
+  final ValueChanged<int>? onChanged;
 
   @override
   State<SingleChoice> createState() => _SingleChoiceState();
@@ -619,7 +622,10 @@ class _SingleChoiceState extends State<SingleChoice> {
             subtitle: widget.options[i].$2,
             icon: widget.icons?[i],
             selected: selected == i,
-            onTap: () => setState(() => selected = i),
+            onTap: () {
+              setState(() => selected = i);
+              widget.onChanged?.call(i);
+            },
           ),
       ],
     );
@@ -633,11 +639,13 @@ class ToggleTile extends StatefulWidget {
     this.subtitle,
     this.initial = true,
     this.icon,
+    this.onChanged,
   });
   final String title;
   final String? subtitle;
   final bool initial;
   final IconData? icon;
+  final ValueChanged<bool>? onChanged;
 
   @override
   State<ToggleTile> createState() => _ToggleTileState();
@@ -669,7 +677,13 @@ class _ToggleTileState extends State<ToggleTile> {
               ],
             ),
           ),
-          Switch(value: value, onChanged: (v) => setState(() => value = v)),
+          Switch(
+            value: value,
+            onChanged: (v) {
+              setState(() => value = v);
+              widget.onChanged?.call(v);
+            },
+          ),
         ],
       ),
     );
@@ -683,10 +697,12 @@ class ChipPicker extends StatefulWidget {
     required this.options,
     this.initial = const {},
     this.single = false,
+    this.onChanged,
   });
   final List<String> options;
   final Set<int> initial;
   final bool single;
+  final ValueChanged<Set<int>>? onChanged;
 
   @override
   State<ChipPicker> createState() => _ChipPickerState();
@@ -703,13 +719,16 @@ class _ChipPickerState extends State<ChipPicker> {
       children: [
         for (var i = 0; i < widget.options.length; i++)
           GestureDetector(
-            onTap: () => setState(() {
-              if (widget.single) {
-                selected = {i};
-              } else if (!selected.remove(i)) {
-                selected.add(i);
-              }
-            }),
+            onTap: () {
+              setState(() {
+                if (widget.single) {
+                  selected = {i};
+                } else if (!selected.remove(i)) {
+                  selected.add(i);
+                }
+              });
+              widget.onChanged?.call({...selected});
+            },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
               decoration: BoxDecoration(
@@ -748,6 +767,12 @@ class CaboField extends StatelessWidget {
     this.suffix,
     this.maxLines = 1,
     this.keyboardType,
+    this.controller,
+    this.onChanged,
+    this.error,
+    this.readOnly = false,
+    this.onTap,
+    this.autofillHints,
   });
   final String label;
   final String? value;
@@ -756,6 +781,14 @@ class CaboField extends StatelessWidget {
   final Widget? suffix;
   final int maxLines;
   final TextInputType? keyboardType;
+
+  /// Supply a controller to read what was typed; [value] is then ignored.
+  final TextEditingController? controller;
+  final ValueChanged<String>? onChanged;
+  final String? error;
+  final bool readOnly;
+  final VoidCallback? onTap;
+  final Iterable<String>? autofillHints;
 
   @override
   Widget build(BuildContext context) {
@@ -767,12 +800,19 @@ class CaboField extends StatelessWidget {
           Text(label, style: CaboText.label),
           const SizedBox(height: 6),
           TextFormField(
-            initialValue: value,
+            controller: controller,
+            initialValue: controller == null ? value : null,
             maxLines: maxLines,
             keyboardType: keyboardType,
+            onChanged: onChanged,
+            readOnly: readOnly,
+            onTap: onTap,
+            autofillHints: autofillHints,
             style: CaboText.body.copyWith(fontSize: 15),
             decoration: InputDecoration(
               hintText: hint,
+              errorText: error,
+              errorMaxLines: 3,
               prefixIcon: icon == null
                   ? null
                   : Icon(icon, color: CaboColors.muted, size: 20),
@@ -793,7 +833,8 @@ class StepScaffold extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.children,
-    required this.next,
+    this.next,
+    this.onNext,
     this.buttonLabel = 'Continue',
     this.totalSteps = 9,
   });
@@ -803,7 +844,12 @@ class StepScaffold extends StatelessWidget {
   final String title;
   final String subtitle;
   final List<Widget> children;
-  final String next;
+
+  /// Route to open on Continue, when there is nothing to save.
+  final String? next;
+
+  /// Saves the step; return normally to let the caller navigate.
+  final Future<void> Function()? onNext;
   final String buttonLabel;
 
   @override
@@ -823,7 +869,9 @@ class StepScaffold extends StatelessWidget {
         ],
       ),
       bottomNavigationBar: BottomActionBar(
-        child: CaboButton(buttonLabel, onPressed: () => go(context, next)),
+        child: onNext != null
+            ? ActionButton(buttonLabel, onPressed: onNext!)
+            : CaboButton(buttonLabel, onPressed: () => go(context, next!)),
       ),
     );
   }
@@ -991,8 +1039,15 @@ class ChatBubble extends StatelessWidget {
 }
 
 class ChatInput extends StatelessWidget {
-  const ChatInput({super.key, this.hint = 'Type a message'});
+  const ChatInput({
+    super.key,
+    this.hint = 'Type a message',
+    this.controller,
+    this.onSend,
+  });
   final String hint;
+  final TextEditingController? controller;
+  final VoidCallback? onSend;
 
   @override
   Widget build(BuildContext context) {
@@ -1000,6 +1055,9 @@ class ChatInput extends StatelessWidget {
       children: [
         Expanded(
           child: TextField(
+            controller: controller,
+            onSubmitted: onSend == null ? null : (_) => onSend!(),
+            textInputAction: TextInputAction.send,
             style: CaboText.body,
             decoration: InputDecoration(
               hintText: hint,
@@ -1019,14 +1077,21 @@ class ChatInput extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 10),
-        Container(
-          width: 50,
-          height: 50,
-          decoration: const BoxDecoration(
-            color: CaboColors.green,
-            shape: BoxShape.circle,
+        Semantics(
+          button: true,
+          label: 'Send',
+          child: GestureDetector(
+            onTap: onSend,
+            child: Container(
+              width: 50,
+              height: 50,
+              decoration: const BoxDecoration(
+                color: CaboColors.green,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.send_rounded, color: Colors.white),
+            ),
           ),
-          child: const Icon(Icons.send_rounded, color: Colors.white),
         ),
       ],
     );
